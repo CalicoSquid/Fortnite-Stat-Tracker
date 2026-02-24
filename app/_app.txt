@@ -1,0 +1,46 @@
+import { useState } from "react";
+import * as Font from "expo-font";
+import AppLoading from "expo-app-loading"; // keeps the splash screen until fonts load
+import { Stack } from "expo-router";
+import { View, Text, StyleSheet } from "react-native";
+
+export default function App() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  const loadFonts = async () => {
+    await Font.loadAsync({
+      "Burbank-Black": require("../assets/fonts/Raleway.ttf"), // make sure this is TTF/OTF
+    });
+  };
+
+  if (!fontsLoaded) {
+    return (
+      <AppLoading
+        startAsync={loadFonts}
+        onFinish={() => setFontsLoaded(true)}
+        onError={(err) => console.warn(err)}
+      />
+    );
+  }
+
+  // Fonts are loaded — show a small on-screen confirmation at the top
+  return (
+    <>
+      <View style={styles.fontLoadedBanner}>
+        <Text style={{ color: "white", fontSize: 16 }}>
+          Fonts loaded!
+        </Text>
+      </View>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: "#111" } }} />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  fontLoadedBanner: {
+    backgroundColor: "#222",
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

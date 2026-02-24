@@ -1,24 +1,56 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+// app/_layout.tsx
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Stack } from "expo-router";
+import { Text } from "react-native";
+import { useFonts } from "expo-font";
+import { AuthProvider, AuthContext } from "../services/authProvider";
+import { useContext } from "react";
+import LoginScreen from "./login"; // your login screen
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// This component decides which stack to show based on user state
+function AppStack() {
+  const user = useContext(AuthContext); // get the current user from context
+  console.log("user:", user);
+  // Show login screen if no user
+  if (!user) {
+    return <LoginScreen />;
+  }
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
+  // Otherwise, show main app stack
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        contentStyle: { backgroundColor: "#111" },
+        headerStyle: { backgroundColor: "#111" },
+        headerTintColor: "#fff",
+        headerTitle: (props) => (
+          <Text
+            style={{
+              fontFamily: "Raleway",
+              fontSize: 20,
+              color: "#fff",
+            }}
+          >
+            {props.children}
+          </Text>
+        ),
+      }}
+    />
+  );
+}
+
+export default function Layout() {
+  const [fontsLoaded] = useFonts({
+    BurbankBlack: require("../assets/fonts/BBCB.otf"),
+    Raleway: require("../assets/fonts/Raleway.ttf"),
+  });
+
+  if (!fontsLoaded) return null;
+
+  // Wrap everything in AuthProvider to provide user context to the app
+  return (
+    <AuthProvider>
+      <AppStack />
+    </AuthProvider>
   );
 }
