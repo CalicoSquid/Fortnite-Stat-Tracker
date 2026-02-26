@@ -1,8 +1,7 @@
 // services/AuthProvider.tsx
 import React, { createContext, useEffect, useState, ReactNode } from "react";
 import { auth } from "./firebase";
-import { signInWithEmailAndPassword, User } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { onAuthStateChanged, signInAnonymously, User } from "firebase/auth";
 
 export const AuthContext = createContext<User | null>(null);
 
@@ -11,37 +10,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const autoLogin = async () => {
-      try {
-        // Try to read stored credentials
-        const email = await AsyncStorage.getItem("email");
-        const password = await AsyncStorage.getItem("password");
-
-        if (email && password) {
-          // Attempt Firebase sign-in
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          setUser(userCredential.user);
-          console.log("Auto-login successful:", userCredential.user.email);
+    // Listen for auth state — fires immediately with current user or null
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Already signed in (anonymous or otherwise)
+        setUser(firebaseUser);
+      } else {
+        // No user — sign in anonymously automatically
+        try {
+          const { user: anonUser } = await signInAnonymously(auth);
+          setUser(anonUser);
+        } catch (err) {
+          console.error("Anonymous sign-in failed:", err);
         }
-      } catch (err) {
-        console.log("Auto-login failed:", err);
-      } finally {
-        setLoading(false);
       }
-    };
+      setLoading(false);
+    });
 
-    autoLogin();
+    return () => unsubscribe();
   }, []);
 
-  // Optional logout function
-  const logout = async () => {
-    await auth.signOut();
-    await AsyncStorage.removeItem("email");
-    await AsyncStorage.removeItem("password");
-    setUser(null);
-  };
-
-  if (loading) return null; // you can replace with a spinner if you like
+  if (loading) return null;
 
   return (
     <AuthContext.Provider value={user}>
