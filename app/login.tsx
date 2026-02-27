@@ -1,5 +1,5 @@
 // app/login.tsx
-import React, { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,14 +8,11 @@ import {
   ActivityIndicator,
   StyleSheet,
   Easing,
-  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { auth } from "../services/firebase";
-import { signInAnonymously } from "firebase/auth";
-import { useState } from "react";
+import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const PURPLE = "#8b5cf6";
 const PURPLE_DARK = "#7c3aed";
 const BG = "#0d0d14";
@@ -24,36 +21,46 @@ const BORDER = "#1e1e30";
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
+  const [hasExistingUser, setHasExistingUser] = useState(false);
+  const [checked, setChecked] = useState(false);
 
-  // Animations
   const btnScale = useRef(new Animated.Value(1)).current;
   const glowOpacity = useRef(new Animated.Value(0.5)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleY = useRef(new Animated.Value(24)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const cardY = useRef(new Animated.Value(32)).current;
-
-  // Ring pulse animations (same as StormEye)
   const ring1 = useRef(new Animated.Value(1)).current;
   const ring2 = useRef(new Animated.Value(1)).current;
   const ring3 = useRef(new Animated.Value(1)).current;
 
+  // Check auth state once on mount — don't auto-redirect, just detect
   useEffect(() => {
-    // Staggered entrance
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setHasExistingUser(!!user);
+      setChecked(true);
+      unsubscribe(); // only need the first emission, then stop listening
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Run entrance animations after auth check resolves
+  useEffect(() => {
+    if (!checked) return;
+
     Animated.sequence([
-      Animated.delay(100),
+      Animated.delay(80),
       Animated.parallel([
         Animated.timing(titleOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
         Animated.timing(titleY, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]),
-      Animated.delay(100),
+      Animated.delay(80),
       Animated.parallel([
         Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
         Animated.timing(cardY, { toValue: 0, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]),
     ]).start();
 
-    // Glow pulse on button
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowOpacity, { toValue: 1, duration: 1400, useNativeDriver: true }),
@@ -61,7 +68,6 @@ export default function LoginScreen() {
       ])
     ).start();
 
-    // Ring pulses
     const pulseRing = (anim: Animated.Value, delay: number) =>
       Animated.loop(
         Animated.sequence([
@@ -73,14 +79,19 @@ export default function LoginScreen() {
     pulseRing(ring1, 0).start();
     pulseRing(ring2, 400).start();
     pulseRing(ring3, 800).start();
-  }, []);
+  }, [checked]);
 
   const handleEnter = async () => {
     if (loading) return;
+    if (hasExistingUser) {
+      // Already have a user — just navigate home, no new sign-in needed
+      router.replace("/");
+      return;
+    }
+    // First time — create anonymous account
     setLoading(true);
     try {
       await signInAnonymously(auth);
-      // AuthProvider's onAuthStateChanged will pick this up automatically
       router.replace("/");
     } catch (err) {
       console.error("Sign in failed:", err);
@@ -89,10 +100,19 @@ export default function LoginScreen() {
     }
   };
 
+  // Blank screen while checking auth — prevents flash
+  if (!checked) {
+    return (
+      <View style={{ flex: 1, backgroundColor: BG, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={PURPLE} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
 
-      {/* ── Animated rings ── */}
+      {/* ── Rings ── */}
       <View style={styles.ringsContainer}>
         <Animated.View style={[styles.ring, styles.ring1, { transform: [{ scale: ring1 }] }]} />
         <Animated.View style={[styles.ring, styles.ring2, { transform: [{ scale: ring2 }] }]} />
@@ -102,33 +122,33 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      {/* ── Title block ── */}
-      <Animated.View
-        style={[
-          styles.titleBlock,
-          { opacity: titleOpacity, transform: [{ translateY: titleY }] },
-        ]}
-      >
+      {/* ── Title ── */}
+      <Animated.View style={[styles.titleBlock, { opacity: titleOpacity, transform: [{ translateY: titleY }] }]}>
         <Text style={styles.appName}>HIGH GROUND</Text>
         <Text style={styles.tagline}>Track. Analyze. Dominate.</Text>
       </Animated.View>
 
-      {/* ── Login card ── */}
-      <Animated.View
-        style={[
-          styles.card,
-          { opacity: cardOpacity, transform: [{ translateY: cardY }] },
-        ]}
-      >
+      {/* ── Card ── */}
+      <Animated.View style={[styles.card, { opacity: cardOpacity, transform: [{ translateY: cardY }] }]}>
         <View style={styles.cardTopBorder} />
 
-        <Text style={styles.cardTitle}>READY TO DROP?</Text>
+        <Text style={styles.cardTitle}>
+          {hasExistingUser ? "WELCOME BACK" : "READY TO DROP?"}
+        </Text>
         <Text style={styles.cardSub}>
-          Your stats. Your sessions. Your edge.
+          {hasExistingUser
+            ? "Your stats are waiting."
+            : "Your stats. Your sessions. Your edge."}
         </Text>
 
-        {/* Enter button */}
-        <Animated.View style={{ shadowOpacity: glowOpacity, shadowColor: PURPLE, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 10 }}>
+        <Animated.View style={{
+          shadowOpacity: glowOpacity,
+          shadowColor: PURPLE,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 10,
+          alignSelf: "stretch",
+        }}>
           <Pressable
             style={styles.enterBtn}
             onPress={handleEnter}
@@ -140,15 +160,21 @@ export default function LoginScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Text style={styles.enterBtnEmoji}>🪂</Text>
-                <Text style={styles.enterBtnText}>ENTER</Text>
+                <Text style={styles.enterBtnEmoji}>
+                  {hasExistingUser ? "🎮" : "🪂"}
+                </Text>
+                <Text style={styles.enterBtnText}>
+                  {hasExistingUser ? "CONTINUE" : "ENTER"}
+                </Text>
               </>
             )}
           </Pressable>
         </Animated.View>
 
         <Text style={styles.disclaimer}>
-          No account needed · Private session
+          {hasExistingUser
+            ? "Signed in · Your data is saved"
+            : "No account needed · Private session"}
         </Text>
       </Animated.View>
 
@@ -168,8 +194,7 @@ const styles = StyleSheet.create({
 
   // ── Rings ──
   ringsContainer: {
-    width: 180,
-    height: 180,
+    width: 180, height: 180,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -182,8 +207,7 @@ const styles = StyleSheet.create({
   ring2: { width: 130, height: 130, borderColor: "rgba(139,92,246,0.2)" },
   ring3: { width: 86,  height: 86,  borderColor: "rgba(139,92,246,0.35)" },
   ringCore: {
-    width: 52,
-    height: 52,
+    width: 52, height: 52,
     borderRadius: 26,
     backgroundColor: PURPLE_DARK,
     alignItems: "center",
@@ -230,9 +254,7 @@ const styles = StyleSheet.create({
   },
   cardTopBorder: {
     position: "absolute",
-    top: 0,
-    left: 40,
-    right: 40,
+    top: 0, left: 40, right: 40,
     height: 2,
     backgroundColor: PURPLE,
     opacity: 0.7,
@@ -253,17 +275,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ── Enter button ──
+  // ── Button ──
   enterBtn: {
     backgroundColor: PURPLE,
     borderRadius: 14,
     paddingVertical: 16,
-    paddingHorizontal: 48,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    minWidth: 200,
     justifyContent: "center",
+    gap: 10,
   },
   enterBtnEmoji: { fontSize: 20 },
   enterBtnText: {

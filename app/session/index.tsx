@@ -10,7 +10,7 @@ import {
   Easing,
   BackHandler,
 } from "react-native";
-import { Stack, router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuthContext } from "../../services/authProvider";
 import { Session } from "../../types/session";

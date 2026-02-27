@@ -1,6 +1,5 @@
 // app/_layout.tsx
 import { Stack } from "expo-router";
-import { Text, Image, FlatList } from "react-native";
 import { useFonts } from "expo-font";
 import { AuthProvider, AuthContext } from "../services/authProvider";
 import { useContext, createContext, useState, useEffect } from "react";
