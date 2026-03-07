@@ -22,7 +22,7 @@ import {
 import { db } from "../../services/firebase";
 import gradientColors from "@/constants/gradient";
 import { SkinsContext } from "../_layout";
-import SkinPicker from "./skin-picker";
+import SkinPicker from "../../components/add-match/SkinPicker";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 // ─── Constants ────────────────────────────────────────────────────────────────

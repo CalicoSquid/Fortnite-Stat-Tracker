@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { useState, useMemo, useEffect } from "react";
-import { Skin } from "../_layout";
+import { Skin } from "../../app/_layout";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PURPLE = "#8b5cf6";

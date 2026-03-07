@@ -7,27 +7,166 @@ import {
   Animated,
   Image,
   ScrollView,
-  ActivityIndicator,
   Easing,
   TextInput,
   Modal,
   StyleSheet,
 } from "react-native";
-import { router, Stack } from "expo-router";
+import { router, Stack, Href} from "expo-router";
 import { useRef, useEffect, useState, useContext } from "react";
-import { auth, db } from "../services/firebase";
+import { db } from "../services/firebase";
 import { AuthContext } from "../services/authProvider";
 import { SkinsContext } from "./_layout";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { purpleGradient } from "../constants/gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
-type RouteType = "../session" | "/view-data" | "/graphs";
+// ─── Shimmer skeleton ─────────────────────────────────────────────────────────
+function useShimmer() {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
+  return shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
+}
 
-const tiles: { title: string; route: RouteType; icon: string }[] = [
-  { title: "View Data", route: "/view-data", icon: "📊" },
-  { title: "Graphs", route: "/graphs", icon: "📈" },
-];
+function SkeletonBlock({
+  w,
+  h,
+  radius = 8,
+  style,
+}: {
+  w: number | string;
+  h: number;
+  radius?: number;
+  style?: any;
+}) {
+  const opacity = useShimmer();
+  return (
+    <Animated.View
+      style={[
+        {
+          width: w,
+          height: h,
+          borderRadius: radius,
+          backgroundColor: "#1e1e30",
+          opacity,
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: BG }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Hero card */}
+      <View
+        style={{
+          margin: tileMargin,
+          marginTop: 50,
+          backgroundColor: CARD_BG,
+          borderRadius: 18,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: BORDER,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <SkeletonBlock w={160} h={36} radius={8} />
+          <SkeletonBlock w={60} h={26} radius={999} />
+        </View>
+        <View style={{ flexDirection: "row", gap: 14 }}>
+          <SkeletonBlock w={110} h={145} radius={12} />
+          <View
+            style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+          >
+            {Array(6)
+              .fill(null)
+              .map((_, i) => (
+                <SkeletonBlock key={i} w="47%" h={52} radius={10} />
+              ))}
+          </View>
+        </View>
+      </View>
+      {/* Sessions button */}
+      <View style={{ paddingHorizontal: tileMargin }}>
+        <SkeletonBlock
+          w="100%"
+          h={90}
+          radius={14}
+          style={{ marginBottom: tileMargin }}
+        />
+      </View>
+      {/* Tiles */}
+      <View style={{ flexDirection: "row", paddingHorizontal: tileMargin / 2 }}>
+        <SkeletonBlock
+          w={tileWidth}
+          h={110}
+          radius={14}
+          style={{ margin: tileMargin / 2 }}
+        />
+        <SkeletonBlock
+          w={tileWidth}
+          h={110}
+          radius={14}
+          style={{ margin: tileMargin / 2 }}
+        />
+      </View>
+      {/* Graph */}
+      <View
+        style={{
+          margin: tileMargin,
+          marginTop: tileMargin / 2,
+          backgroundColor: CARD_BG,
+          borderRadius: 18,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: BORDER,
+        }}
+      >
+        <SkeletonBlock w={140} h={20} radius={6} style={{ marginBottom: 14 }} />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-end",
+            height: 140,
+            gap: 4,
+          }}
+        >
+          {[40, 90, 60, 120, 80, 50, 110, 70, 100, 55].map((h, i) => (
+            <SkeletonBlock key={i} w="9%" h={h} radius={6} />
+          ))}
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
 
 const { width } = Dimensions.get("window");
 const tileMargin = 15;
@@ -35,46 +174,46 @@ const numColumns = 2;
 const tileWidth = (width - tileMargin * (numColumns + 1)) / numColumns;
 
 const PURPLE = "#8b5cf6";
+const PURPLE_DARK = "#7c3aed";
+const AMBER = "#f59e0b";
 const BG = "#0d0d14";
 const CARD_BG = "#0f0f1a";
 const INNER_BG = "#0a0a12";
 const BORDER = "#1e1e30";
-const DEFAULT_AVATAR =
-  "https://wallpapers.com/images/hd/fortnite-purple-q39h6u1tdqzulyvo.jpg";
+const DEFAULT_AVATAR = null;
 const USERNAME_KEY = "hg_username";
 const SLOT_COUNT = 10;
 
+const tiles: {
+  title: string;
+  route: Href;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+}[] = [
+  {
+    title: "Analytics",
+    route: "/view-data" as Href,
+    icon: "stats-chart-outline",
+    color: PURPLE,
+  },
+  {
+    title: "Trophy Cabinet",
+    route: "/graphs" as Href,
+    icon: "trophy-outline",
+    color: AMBER,
+  },
+];
 // ─── Mode badge colors ────────────────────────────────────────────────────────
 const MODE_COLORS: Record<string, string> = {
   OG: "#8b5cf6",
   BR: "#3b82f6",
   Reload: "#f59e0b",
 };
-const getPlacementColor = (placement: number) => {
-  if (placement === 1) return "#FFD700"; // gold
 
-  const clamped = Math.max(1, Math.min(placement, 100));
-  const percent = (101 - clamped) / 100; 
-  // 1 = best non-win
-  // 0 = worst
-
-  const hue = 270; // true purple
-
-  // Dark + rich when bad
-  // Light + soft when good
-  const lightness = 20 + percent * 60; 
-  // 20% (deep royal purple)
-  // 80% (pastel violet)
-
-  const saturation = 85 - percent * 35; 
-  // 85% (rich dark purple)
-  // 50% (soft pastel)
-
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-};
 export default function HomeScreen() {
   const user = useContext(AuthContext);
   const { skins, skinLoading } = useContext(SkinsContext);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
 
   const [totals, setTotals] = useState<{
     matches: number;
@@ -87,7 +226,7 @@ export default function HomeScreen() {
     topMode: string;
   } | null>(null);
 
-  const [avatarImage, setAvatarImage] = useState<string>(DEFAULT_AVATAR);
+  const [avatarImage, setAvatarImage] = useState<string | null>(DEFAULT_AVATAR);
   const [loading, setLoading] = useState(false);
 
   // ── Username state ──
@@ -102,6 +241,12 @@ export default function HomeScreen() {
   const animatedBars = useRef<Animated.Value[]>(
     Array.from({ length: 10 }, () => new Animated.Value(0)),
   ).current;
+
+  // Entrance animations
+  const heroY = useRef(new Animated.Value(30)).current;
+  const heroOpacity = useRef(new Animated.Value(0)).current;
+  const contentY = useRef(new Animated.Value(20)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
 
   // ── Load username from AsyncStorage ──────────────────────────────────────
   useEffect(() => {
@@ -186,10 +331,7 @@ export default function HomeScreen() {
         const wins = matches.filter((m) => (m.placement ?? 0) === 1).length;
         const winPercentage = totalMatches ? (wins / totalMatches) * 100 : 0;
         const kdRatio = totalMatches ? totalKills / totalMatches : 0;
-        const last10 = matches
-          .slice(0, 10) // newest → older
-          .map((m) => m.placement ?? 0)
-          .reverse(); // oldest → newest
+        const last10 = matches.slice(0, 10).map((m) => m.placement ?? 0);
 
         setTotals({
           matches: totalMatches,
@@ -201,6 +343,40 @@ export default function HomeScreen() {
           top10,
           topMode,
         });
+
+        // ── Entrance animation ──
+        heroY.setValue(30);
+        heroOpacity.setValue(0);
+        contentY.setValue(20);
+        contentOpacity.setValue(0);
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(heroOpacity, {
+              toValue: 1,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+            Animated.timing(heroY, {
+              toValue: 0,
+              duration: 400,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(contentOpacity, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(contentY, {
+              toValue: 0,
+              duration: 300,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+          ]),
+        ]).start();
 
         // ── Animate bars — pad left with nulls, data on the right ──
         // animatedBars[0..9] map to paddedLast10[0..9]
@@ -254,11 +430,18 @@ export default function HomeScreen() {
     ).start();
   }, []);
 
-  const renderTile = ({
-    item,
-  }: {
-    item: { title: string; route: RouteType; icon: string };
-  }) => (
+  useEffect(() => {
+    if (!user?.uid) return;
+    const sessionsRef = collection(db, "users", user.uid, "sessions");
+    const q = query(sessionsRef, orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snap) => {
+      const active = snap.docs.some((d) => !d.data().endedAt);
+      setHasActiveSession(active);
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
+  const renderTile = ({ item }: { item: (typeof tiles)[0] }) => (
     <Animated.View
       style={{ transform: [{ scale: scaleAnim }], margin: tileMargin / 2 }}
     >
@@ -276,38 +459,31 @@ export default function HomeScreen() {
             useNativeDriver: true,
           }).start()
         }
-        style={styles.tile}
+        style={[styles.tile, { borderColor: item.color + "40" }]}
       >
-        <Text style={styles.tileIcon}>{item.icon}</Text>
-        <Text style={styles.tileText}>{item.title}</Text>
+        <Ionicons name={item.icon} size={26} color={item.color} />
+        <Text style={[styles.tileText, { color: item.color }]}>
+          {item.title}
+        </Text>
       </Pressable>
     </Animated.View>
   );
 
-  if (loading || !totals)
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: BG,
-        }}
-      >
-        <ActivityIndicator size="large" color={PURPLE} />
-      </View>
-    );
+  if (loading || !totals) return <HomeSkeleton />;
 
   // Always 10 fixed slots, newest match is rightmost
   const paddedLast10: (number | null)[] = [
+    ...totals.last10.slice().reverse(),
     ...Array(Math.max(0, SLOT_COUNT - totals.last10.length)).fill(null),
-    ...totals.last10,
   ];
 
   const modeColor = MODE_COLORS[totals.topMode] ?? PURPLE;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* ── USERNAME EDIT MODAL ── */}
       <Modal visible={editingName} transparent animationType="fade">
         <Pressable
           style={styles.modalBackdrop}
@@ -335,168 +511,222 @@ export default function HomeScreen() {
       </Modal>
 
       {/* ── HERO CARD ── */}
-      <View style={styles.heroCard}>
-        <View style={styles.heroHeaderRow}>
-          {/* Tap name to edit */}
-          <Pressable
-            onPress={() => {
-              setDraftName(username);
-              setEditingName(true);
-            }}
-            style={styles.playerNameRow}
-          >
-            <Text
-              style={styles.playerName}
-              numberOfLines={1}
-              ellipsizeMode="tail"
+      <Animated.View
+        style={{ opacity: heroOpacity, transform: [{ translateY: heroY }] }}
+      >
+        <View style={styles.heroCard}>
+          <View style={styles.cardTopBorder} />
+
+          <View style={styles.heroHeaderRow}>
+            {/* Tap name to edit */}
+            <Pressable
+              onPress={() => {
+                setDraftName(username);
+                setEditingName(true);
+              }}
+              style={styles.playerNameRow}
             >
-              {username}
-            </Text>
-            <Text style={styles.editPencil}>✎</Text>
-          </Pressable>
+              <Text
+                style={styles.playerName}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {username}
+              </Text>
+              <Text style={styles.editPencil}>✎</Text>
+            </Pressable>
 
-          {/* Dynamic mode badge */}
-          <View
-            style={[
-              styles.modeBadge,
-              {
-                backgroundColor: `${modeColor}22`,
-                borderColor: `${modeColor}88`,
-              },
-            ]}
-          >
-            <Text style={[styles.modeText, { color: modeColor }]}>
-              {totals.topMode}
-            </Text>
+            {/* Dynamic mode badge */}
+            <View
+              style={[
+                styles.modeBadge,
+                {
+                  backgroundColor: `${modeColor}22`,
+                  borderColor: `${modeColor}88`,
+                },
+              ]}
+            >
+              <Text style={[styles.modeText, { color: modeColor }]}>
+                {totals.topMode}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.heroContentRow}>
-          <Image source={{ uri: avatarImage }} style={styles.avatar} />
-          <View style={styles.statsColumns}>
-            <StatBox
-              label="WIN %"
-              value={`${totals.winPercentage.toFixed(1)}%`}
-              accent
-            />
-            <StatBox
-              label="KILLS"
-              value={totals.kills.toLocaleString()}
-              accent
-            />
-            <StatBox label="MATCHES" value={totals.matches.toLocaleString()} />
-            <StatBox label="WINS" value={totals.wins.toLocaleString()} />
-            <StatBox label="TOP 10" value={totals.top10.toLocaleString()} />
-            <StatBox label="K/D" value={totals.kdRatio.toFixed(2)} />
-          </View>
-        </View>
-      </View>
+          <View style={styles.heroContentRow}>
+            {avatarImage ? (
+              <Image source={{ uri: avatarImage }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarBolt}>⚡</Text>
+              </View>
+            )}
 
-      {/* ── PRIMARY ACTION ── */}
-      <View style={{ paddingHorizontal: tileMargin }}>
-        <Animated.View
-          style={{
-            transform: [{ scale: primaryScale }],
-            shadowOpacity: glowOpacity,
-          }}
-        >
-          <Pressable
-            onPress={() => router.push("../session")}
-            onPressIn={() =>
-              Animated.spring(primaryScale, {
-                toValue: 0.96,
-                useNativeDriver: true,
-              }).start()
-            }
-            onPressOut={() =>
-              Animated.spring(primaryScale, {
-                toValue: 1,
-                useNativeDriver: true,
-              }).start()
-            }
-            style={styles.primaryTile}
-          >
-            <Text style={styles.primaryTileEmoji}>🪂</Text>
-            <Text style={styles.primaryText}>SESSIONS</Text>
-          </Pressable>
-        </Animated.View>
-      </View>
-
-      {/* ── SECONDARY TILES ── */}
-      <FlatList
-        data={tiles}
-        renderItem={renderTile}
-        keyExtractor={(item) => item.title}
-        numColumns={2}
-        scrollEnabled={false}
-        contentContainerStyle={{ paddingHorizontal: tileMargin / 2 }}
-      />
-
-      {/* ── LAST 10 MATCHES GRAPH ── */}
-      <View style={styles.graphCard}>
-        <Text style={styles.sectionTitle}>Last 10 Matches</Text>
-
-        {/* Labels row — always 10 fixed slots */}
-        <View style={styles.labelsRow}>
-          {paddedLast10.map((placement, i) => {
-            if (placement === null)
-              return <View key={i} style={styles.barSlot} />;
-            const clamped = Math.max(1, Math.min(placement, 100));
-            const isWin = clamped === 1;
-            return (
-              <View key={i} style={styles.barSlot}>
-                <Text style={[styles.barLabel, isWin && styles.barLabelWin]}>
-                  {isWin ? "👑" : clamped}
+            {/* Zero state — hide stats, show welcome CTA */}
+            {totals.matches === 0 ? (
+              <View style={styles.zeroState}>
+                <Text style={styles.zeroTitle}>NO STATS YET</Text>
+                <Text style={styles.zeroSub}>
+                  Drop in and play your first match to start tracking your
+                  journey.
                 </Text>
               </View>
-            );
-          })}
+            ) : (
+              <View style={styles.statsColumns}>
+                <StatBox
+                  label="WIN %"
+                  value={`${totals.winPercentage.toFixed(1)}%`}
+                  accent
+                />
+                <StatBox
+                  label="KILLS"
+                  value={totals.kills.toLocaleString()}
+                  accent
+                />
+                <StatBox label="WINS" value={totals.wins.toLocaleString()} />
+                <StatBox label="K/D" value={totals.kdRatio.toFixed(2)} />
+              </View>
+            )}
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* ── PRIMARY ACTION ── */}
+      <Animated.View
+        style={{
+          opacity: contentOpacity,
+          transform: [{ translateY: contentY }],
+        }}
+      >
+        <View style={{ paddingHorizontal: tileMargin }}>
+          <Animated.View
+            style={{
+              transform: [{ scale: primaryScale }],
+              shadowOpacity: glowOpacity,
+            }}
+          >
+            <Pressable
+              onPress={() => router.push("../session")}
+              onPressIn={() =>
+                Animated.spring(primaryScale, {
+                  toValue: 0.96,
+                  useNativeDriver: true,
+                }).start()
+              }
+              onPressOut={() =>
+                Animated.spring(primaryScale, {
+                  toValue: 1,
+                  useNativeDriver: true,
+                }).start()
+              }
+              style={styles.primaryTile}
+            >
+              {/* Diagonal gradient layers */}
+             
+              <View style={styles.primaryTileGradient} />
+              
+              {/* Left: icon + label */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
+                  flex: 1,
+                }}
+              >
+                <View style={styles.primaryIconWrap}>
+                  <Ionicons
+                    name="game-controller-outline"
+                    size={22}
+                    color={PURPLE}
+                  />
+                </View>
+                <Text style={styles.primaryText}>SESSIONS</Text>
+              </View>
+
+              {/* Right: live indicator OR arrow */}
+              {hasActiveSession ? (
+                <View style={styles.liveBadge}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color="#ffffff30" />
+              )}
+            </Pressable>
+          </Animated.View>
         </View>
 
-        {/* Bars row — always 10 fixed slots */}
-        <View style={styles.barsRow}>
-          {paddedLast10.map((placement, i) => {
-            if (placement === null) {
-              return (
-                <View
-                  key={i}
-                  style={[
-                    styles.barSlot,
-                    { justifyContent: "flex-end", alignItems: "center" },
-                  ]}
-                >
-                  <View style={styles.emptyBar} />
-                </View>
-              );
-            }
-            const clamped = Math.max(1, Math.min(placement, 100));
-            const isWin = clamped === 1;
-            const MAX_BAR = 140;
-            // Continuous: 1st = 100%, 100th = 1%
-            const heightPercent = (101 - clamped) / 100;
-            const targetHeight = Math.max(MAX_BAR * heightPercent, 4);
-            const gradientIndex = Math.min(Math.floor((clamped - 1) / 10), 9);
-            const invertedIndex = 9 - gradientIndex;
+        {/* ── SECONDARY TILES ── */}
+        <FlatList
+          data={tiles}
+          renderItem={renderTile}
+          keyExtractor={(item) => item.title}
+          numColumns={2}
+          scrollEnabled={false}
+          contentContainerStyle={{ paddingHorizontal: tileMargin / 2 }}
+        />
 
-            const barColor = getPlacementColor(clamped);
+        {/* ── LAST 10 MATCHES GRAPH — only when there's data ── */}
+        {/* ── LAST 10 MATCHES GRAPH — always visible ── */}
+        {/* ── LAST 10 MATCHES GRAPH ── */}
+<View style={styles.graphCard}>
+  <View style={styles.graphHeader}>
+    <Text style={styles.sectionTitle}>LAST 10 MATCHES</Text>
+    {totals.matches > 0 && (
+      <Text style={styles.graphMeta}>
+        {totals.last10.filter((p) => p === 1).length} wins
+      </Text>
+    )}
+  </View>
+
+  {totals.matches === 0 ? (
+    <View style={styles.graphEmpty}>
+      {[28, 52, 38, 70, 44, 32, 60, 42, 56, 36].map((h, i) => (
+        <View key={i} style={[styles.placeholderBar, { height: h }]} />
+      ))}
+      <Text style={styles.graphHint}>Play your first match to see history</Text>
+    </View>
+  ) : (
+    <View style={styles.graphContent}>
+      <View style={styles.barsRow}>
+        {paddedLast10.map((placement, i) => {
+          if (placement === null) {
             return (
-              <View
-                key={i}
-                style={[
-                  styles.barSlot,
-                  { justifyContent: "flex-end", alignItems: "center" },
-                ]}
-              >
+              <View key={i} style={styles.barSlot}>
+                <View style={styles.emptyBar} />
+              </View>
+            );
+          }
+          const clamped = Math.max(1, Math.min(placement, 100));
+          const isWin = clamped === 1;
+          const MAX_BAR = 120;
+          const heightPercent = (101 - clamped) / 100;
+          const targetHeight = Math.max(MAX_BAR * heightPercent, 4);
+          const barColor = isWin
+            ? AMBER
+            : purpleGradient[Math.min(Math.floor((100 - clamped) / 10), 9)];
+
+          return (
+            <View key={i} style={styles.barSlot}>
+              {/* Placement label */}
+              <Text style={[styles.barLabel, isWin && styles.barLabelWin]}>
+                {isWin ? "👑" : `#${clamped}`}
+              </Text>
+              {/* Bar */}
+              <View style={styles.barTrack}>
                 <Animated.View
                   style={{
-                    width: "85%",
-                    backgroundColor: barColor,
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
                     borderRadius: 6,
-                    borderWidth: isWin ? 2 : 0,
-                    borderColor: isWin ? "#FFD700" : "transparent",
-                    shadowColor: isWin ? "#FFD700" : "transparent",
-                    shadowOpacity: isWin ? 0.9 : 0,
-                    shadowRadius: isWin ? 10 : 0,
+                    backgroundColor: isWin ? AMBER + "22" : barColor + "18",
+                    borderWidth: 1,
+                    borderColor: isWin ? AMBER + "88" : barColor + "66",
+                    shadowColor: barColor,
+                    shadowOpacity: isWin ? 0.7 : 0.4,
+                    shadowRadius: isWin ? 8 : 4,
                     shadowOffset: { width: 0, height: 0 },
                     height: animatedBars[i].interpolate({
                       inputRange: [0, 1],
@@ -505,29 +735,35 @@ export default function HomeScreen() {
                   }}
                 />
               </View>
-            );
-          })}
+            </View>
+          );
+        })}
+      </View>
+      {totals.last10.length < 10 && (
+        <Text style={styles.graphHint}>
+          {10 - totals.last10.length} more {10 - totals.last10.length === 1 ? "match" : "matches"} to fill
+        </Text>
+      )}
+    </View>
+  )}
+</View>
+
+        {/* ── LOGOUT ── */}
+        <View style={{ paddingHorizontal: tileMargin, marginBottom: 40 }}>
+          <Pressable
+            onPress={async () => {
+              try {
+                router.replace("/login");
+              } catch (err) {
+                console.error("Logout failed:", err);
+              }
+            }}
+            style={styles.logoutBtn}
+          >
+            <Text style={styles.logoutText}>LOGOUT</Text>
+          </Pressable>
         </View>
-
-        {totals.last10.length < 10 && (
-          <Text style={styles.graphHint}>
-            {10 - totals.last10.length} more match
-            {10 - totals.last10.length !== 1 ? "es" : ""} to fill the chart
-          </Text>
-        )}
-      </View>
-
-      {/* ── LOGOUT ── */}
-      <View style={{ paddingHorizontal: tileMargin, marginBottom: 40 }}>
-        <Pressable
-          onPress={async () => {
-            router.replace("/login");
-          }}
-          style={styles.logoutBtn}
-        >
-          <Text style={styles.logoutText}>LOGOUT</Text>
-        </Pressable>
-      </View>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -684,6 +920,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
   },
+  avatarPlaceholder: {
+    width: 110,
+    height: 145,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.3)",
+    backgroundColor: "rgba(124,58,237,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarBolt: {
+    fontSize: 44,
+  },
+
+  // ── Zero state ──
+  zeroState: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 10,
+    paddingLeft: 4,
+  },
+  zeroTitle: {
+    fontFamily: "BurbankBlack",
+    fontSize: 18,
+    color: "#fff",
+    letterSpacing: 2,
+  },
+  zeroSub: {
+    fontSize: 12,
+    color: "#555",
+    lineHeight: 18,
+    letterSpacing: 0.3,
+  },
   statsColumns: {
     flex: 1,
     flexDirection: "row",
@@ -714,28 +983,8 @@ const styles = StyleSheet.create({
   },
 
   // ── Primary tile ──
-  primaryTile: {
-    backgroundColor: PURPLE,
-    borderRadius: 14,
-    height: 90,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: tileMargin,
-    shadowColor: PURPLE,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    elevation: 10,
-  },
+
   primaryTileEmoji: { fontSize: 28 },
-  primaryText: {
-    fontFamily: "BurbankBlack",
-    fontSize: 28,
-    color: "#fff",
-    letterSpacing: 2,
-  },
 
   // ── Secondary tiles ──
   tile: {
@@ -747,7 +996,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: BORDER,
-    margin: tileMargin / 2,
+    //margin: tileMargin / 2,
   },
   tileText: {
     color: "#fff",
@@ -759,61 +1008,14 @@ const styles = StyleSheet.create({
   tileIcon: { fontSize: 28 },
 
   // ── Graph card ──
-  graphCard: {
-    margin: tileMargin,
-    marginTop: tileMargin / 2,
-    backgroundColor: CARD_BG,
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  sectionTitle: {
-    fontFamily: "BurbankBlack",
-    fontSize: 18,
-    color: "#fff",
-    letterSpacing: 1,
-    marginBottom: 14,
-  },
+ 
   labelsRow: {
     flexDirection: "row", // left to right: oldest → newest
     marginBottom: 6,
     alignItems: "flex-end",
     height: 24,
-  },
-  barsRow: {
-    flexDirection: "row", // left to right: oldest → newest
-    alignItems: "flex-end",
-    height: 140,
-  },
-  // Fixed-width slot — always same width regardless of count
-  barSlot: {
-    flex: 1,
-    alignItems: "center",
-  },
-  barLabel: {
-    color: "#fff",
-    fontFamily: "BurbankBlack",
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  barLabelWin: {
-    fontSize: 15,
-    color: "#FFD700",
-  },
-  emptyBar: {
-    width: "85%",
-    height: 4,
-    backgroundColor: "#1a1a28",
-    borderRadius: 3,
-  },
-  graphHint: {
-    color: "#333",
-    fontSize: 10,
-    letterSpacing: 1,
-    textAlign: "center",
-    marginTop: 10,
-  },
+  }, 
+
 
   // ── Logout ──
   logoutBtn: {
@@ -831,4 +1033,164 @@ const styles = StyleSheet.create({
     color: "#444",
     letterSpacing: 3,
   },
+ primaryTile: {
+  backgroundColor: "#1a1228",
+  borderRadius: 14,
+  height: 72,
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 18,
+  marginBottom: tileMargin / 2,
+  borderWidth: 1,
+  borderColor: PURPLE + "80",
+  overflow: "hidden",
+  elevation: 6,
+},
+primaryGlow: {
+  position: "absolute",
+  top: -30,
+  left: -30,
+  width: 120,
+  height: 120,
+  borderRadius: 60,
+  backgroundColor: PURPLE,
+  opacity: 0.18,
+},
+  primaryText: {
+    fontFamily: "BurbankBlack",
+    fontSize: 20,
+    color: "#fff",
+    letterSpacing: 2,
+  },
+  primaryIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: PURPLE + "18",
+    borderWidth: 1,
+    borderColor: PURPLE + "30",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#22c55e18",
+    borderWidth: 1,
+    borderColor: "#22c55e40",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#22c55e",
+    shadowColor: "#22c55e",
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  liveText: {
+    color: "#22c55e",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  primaryTileGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: PURPLE,
+    opacity: 0.12,
+    transform: [{ skewX: "-20deg" }, { scaleX: 1.5 }],
+  },
+  primaryTileDiag: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: PURPLE,
+    opacity: 0.06,
+    transform: [{ skewX: "-35deg" }, { translateX: 60 }, { scaleX: 1.2 }],
+  },
+  graphCard: {
+  margin: tileMargin,
+  marginTop: tileMargin / 2,
+  backgroundColor: CARD_BG,
+  borderRadius: 18,
+  padding: 20,
+  borderWidth: 1,
+  borderColor: BORDER,
+},
+graphHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 16,
+},
+sectionTitle: {
+  fontFamily: "BurbankBlack",
+  fontSize: 14,
+  color: "#fff",
+  letterSpacing: 3,
+},
+graphMeta: {
+  color: AMBER,
+  fontSize: 10,
+  fontWeight: "700",
+  letterSpacing: 1.5,
+},
+graphEmpty: {
+  flexDirection: "row",
+  alignItems: "flex-end",
+  height: 120,
+  gap: 4,
+},
+graphContent: { gap: 10 },
+barsRow: {
+  flexDirection: "row",
+  alignItems: "flex-end",
+  height: 160,
+  gap: 4,
+},
+barSlot: {
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "flex-end",
+  height: 160,
+  gap: 4,
+},
+barTrack: {
+  width: "100%",
+  height: 120,
+  justifyContent: "flex-end",
+},
+barLabel: {
+  color: "#555",
+  fontSize: 9,
+  fontWeight: "700",
+  letterSpacing: 0.5,
+  textAlign: "center",
+},
+barLabelWin: {
+  fontSize: 13,
+  color: AMBER,
+},
+emptyBar: {
+  width: "100%",
+  height: 4,
+  backgroundColor: "#16162a",
+  borderRadius: 3,
+},
+placeholderBar: {
+  flex: 1,
+  backgroundColor: "#16162a",
+  borderRadius: 6,
+  opacity: 0.5,
+},
+graphHint: {
+  color: "#333",
+  fontSize: 10,
+  letterSpacing: 1,
+  textAlign: "center",
+  marginTop: 6,
+},
 });

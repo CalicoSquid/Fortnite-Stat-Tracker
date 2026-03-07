@@ -1,16 +1,16 @@
 // services/firebase.ts
-
 import { initializeApp } from "firebase/app";
 import { initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDzLmGquu7OjF9etnt6JYdY73PMrg25lf0",
-  authDomain: "high-ground-2190e.firebaseapp.com",
-  projectId: "high-ground-2190e",
-  storageBucket: "high-ground-2190e.firebasestorage.app",
-  messagingSenderId: "445814891600",
-  appId: "1:445814891600:web:a8525a4ec1db04d48f1d55",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);

@@ -8,11 +8,7 @@
     "scheme": "fortjournal",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/ringsplash11.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#0d0d14"
-    },
+
     "ios": {
       "supportsTablet": true
     },
@@ -34,7 +30,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundImage": "./assets/images/ringsplash11.png",
+          "image": "./assets/images/app-icon.png",
+          "imageWidth": 100,
+          "resizeMode": "contain",
           "backgroundColor": "#0d0d14",
           "dark": {
             "backgroundColor": "#0d0d14"
