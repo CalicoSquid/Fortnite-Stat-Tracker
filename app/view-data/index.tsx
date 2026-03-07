@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Stack, router } from "expo-router";
-import { AuthContext } from "@/services/authProvider";
+import { AuthContext, useAuth } from "@/services/authProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { useViewData } from "@/hooks/useViewData";
 import AnalyticsCard from "@/components/analytics/AnalyticsCard";
@@ -32,7 +32,7 @@ const BORDER = "#1e1e30";
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function ViewDataScreen() {
-  const user = useContext(AuthContext);
+  const { user } = useAuth();
   const { matches, sessions, loading } = useViewData(user?.uid);
 
   if (loading) {

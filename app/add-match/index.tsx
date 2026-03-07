@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useState, useContext, useRef } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { AuthContext } from "../../services/authProvider";
+import { AuthContext, useAuth } from "../../services/authProvider";
 import {
   addDoc,
   collection,
@@ -33,7 +33,7 @@ const INNER_BG = "#0a0a12";
 const BORDER = "#1e1e30";
 
 export default function AddMatchScreen() {
-  const user = useContext(AuthContext);
+  const { user } = useAuth();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const { skins, skinLoading } = useContext(SkinsContext);
 
@@ -117,8 +117,8 @@ export default function AddMatchScreen() {
           averageMental: newTotalMental / newTotalMatches,
           wins: increment(isWin ? 1 : 0),
           winPercentage: isWin
-            ? ((sessionData.wins ?? 0) + 1) / newTotalMatches * 100
-            : (sessionData.wins ?? 0) / newTotalMatches * 100,
+            ? (((sessionData.wins ?? 0) + 1) / newTotalMatches) * 100
+            : ((sessionData.wins ?? 0) / newTotalMatches) * 100,
         });
       }
 
@@ -153,12 +153,14 @@ export default function AddMatchScreen() {
       <View style={styles.screenHeader}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.replace({ pathname: "/session", params: { sessionId } })}
+          onPress={() =>
+            router.replace({ pathname: "/session", params: { sessionId } })
+          }
         >
           <Text style={styles.backArrow}>←</Text>
         </Pressable>
         <Text style={styles.screenTitle}>ADD MATCH</Text>
-        <View style={styles.spacer} /> 
+        <View style={styles.spacer} />
       </View>
 
       {/* ── Mode ── */}
@@ -171,10 +173,17 @@ export default function AddMatchScreen() {
               onPress={() => setMode(m)}
               style={[
                 styles.segmentBtn,
-                mode === m ? styles.segmentBtnActive : styles.segmentBtnInactive,
+                mode === m
+                  ? styles.segmentBtnActive
+                  : styles.segmentBtnInactive,
               ]}
             >
-              <Text style={[styles.segmentText, mode === m && styles.segmentTextActive]}>
+              <Text
+                style={[
+                  styles.segmentText,
+                  mode === m && styles.segmentTextActive,
+                ]}
+              >
                 {m}
               </Text>
             </Pressable>
@@ -236,7 +245,10 @@ export default function AddMatchScreen() {
               onPress={() => setMentalState(i)}
               style={[
                 styles.sliderStep,
-                { backgroundColor: i <= mentalState ? gradientColors[i - 1] : "#1e1e2e" },
+                {
+                  backgroundColor:
+                    i <= mentalState ? gradientColors[i - 1] : "#1e1e2e",
+                },
               ]}
             />
           ))}

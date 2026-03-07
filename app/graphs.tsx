@@ -9,25 +9,32 @@ import {
 } from "react-native";
 import { Stack, router } from "expo-router";
 import { TouchableOpacity } from "react-native";
-import { collection, query, orderBy, onSnapshot, getDocs, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
 import { db } from "@/services/firebase";
-import { AuthContext } from "@/services/authProvider";
+import { AuthContext, useAuth } from "@/services/authProvider";
 import { Ionicons } from "@expo/vector-icons";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
-const PURPLE      = "#8b5cf6";
+const PURPLE = "#8b5cf6";
 const PURPLE_DARK = "#7c3aed";
-const AMBER       = "#f59e0b";
-const GREEN       = "#22c55e";
-const BLUE        = "#3b82f6";
-const RED         = "#ef4444";
-const BG          = "#0d0d14";
-const CARD_BG     = "#0f0f1a";
-const INNER_BG    = "#0a0a12";
-const BORDER      = "#1e1e30";
+const AMBER = "#f59e0b";
+const GREEN = "#22c55e";
+const BLUE = "#3b82f6";
+const RED = "#ef4444";
+const BG = "#0d0d14";
+const CARD_BG = "#0f0f1a";
+const INNER_BG = "#0a0a12";
+const BORDER = "#1e1e30";
 
 // ─── Trophy tier colors ───────────────────────────────────────────────────────
-const GOLD   = "#FFD700";
+const GOLD = "#FFD700";
 const SILVER = "#94a3b8";
 const BRONZE = "#cd7f32";
 
@@ -66,7 +73,11 @@ const toDate = (date: string | Timestamp): Date => {
 };
 
 const fmtDate = (d: Date) =>
-  d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
 const fmtDateShort = (d: Date) =>
   d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -103,7 +114,8 @@ function TrophyCard({
     }).start();
   }, []);
 
-  const tierColor = tier === "gold" ? GOLD : tier === "silver" ? SILVER : BRONZE;
+  const tierColor =
+    tier === "gold" ? GOLD : tier === "silver" ? SILVER : BRONZE;
 
   return (
     <Animated.View
@@ -141,7 +153,9 @@ function TrophyCard({
       {/* Content */}
       <Text style={s.trophyLabel}>{label}</Text>
       <Text style={[s.trophyValue, { color }]}>{value}</Text>
-      <Text style={s.trophySub} numberOfLines={2}>{sub}</Text>
+      <Text style={s.trophySub} numberOfLines={2}>
+        {sub}
+      </Text>
     </Animated.View>
   );
 }
@@ -160,7 +174,7 @@ function EmptyTrophy({ label }: { label: string }) {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function TrophyCabinetScreen() {
-  const user = useContext(AuthContext);
+  const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +196,7 @@ export default function TrophyCabinetScreen() {
     if (!user?.uid) return;
     const q = query(
       collection(db, "users", user.uid, "matches"),
-      orderBy("date", "desc")
+      orderBy("date", "desc"),
     );
     const unsub = onSnapshot(q, (snap) => {
       setMatches(snap.docs.map((d) => d.data() as Match));
@@ -196,7 +210,10 @@ export default function TrophyCabinetScreen() {
     const load = async () => {
       try {
         const snap = await getDocs(
-          query(collection(db, "users", user.uid, "sessions"), orderBy("createdAt", "desc"))
+          query(
+            collection(db, "users", user.uid, "sessions"),
+            orderBy("createdAt", "desc"),
+          ),
         );
         setSessions(
           snap.docs.map((d) => {
@@ -204,7 +221,9 @@ export default function TrophyCabinetScreen() {
             return {
               id: d.id,
               createdAt: (data.createdAt as Timestamp).toDate(),
-              endedAt: data.endedAt ? (data.endedAt as Timestamp).toDate() : null,
+              endedAt: data.endedAt
+                ? (data.endedAt as Timestamp).toDate()
+                : null,
               totalKills: data.totalKills ?? 0,
               totalMatches: data.totalMatches ?? 0,
               averagePlacement: data.averagePlacement ?? 0,
@@ -212,7 +231,7 @@ export default function TrophyCabinetScreen() {
               wins: data.wins ?? 0,
               winPercentage: data.winPercentage ?? 0,
             };
-          })
+          }),
         );
       } catch (e) {
         console.error(e);
@@ -259,53 +278,65 @@ export default function TrophyCabinetScreen() {
     }
   });
   const streakStartMatch = chronoMatches[bestStreakStartIdx];
-  const streakEndMatch   = chronoMatches[bestStreakStartIdx + bestStreak - 1];
+  const streakEndMatch = chronoMatches[bestStreakStartIdx + bestStreak - 1];
 
   // 3. Highest win % session
   const bestWinPctSession = ended.length
-    ? ended.reduce((best, s) => (s.winPercentage > best.winPercentage ? s : best), ended[0])
+    ? ended.reduce(
+        (best, s) => (s.winPercentage > best.winPercentage ? s : best),
+        ended[0],
+      )
     : null;
 
   // 4. Best avg placement session (lowest avg placement)
   const bestPlacementSession = ended.length
-    ? ended.reduce((best, s) =>
-        s.averagePlacement < best.averagePlacement && s.totalMatches >= 3 ? s : best,
-        ended[0]
+    ? ended.reduce(
+        (best, s) =>
+          s.averagePlacement < best.averagePlacement && s.totalMatches >= 3
+            ? s
+            : best,
+        ended[0],
       )
     : null;
 
   // 5. Peak mental session
   const bestMentalSession = ended.length
-    ? ended.reduce((best, s) => (s.averageMental > best.averageMental ? s : best), ended[0])
+    ? ended.reduce(
+        (best, s) => (s.averageMental > best.averageMental ? s : best),
+        ended[0],
+      )
     : null;
 
   // 6. Most kills in a session
   const bestKillSession = ended.length
-    ? ended.reduce((best, s) => (s.totalKills > best.totalKills ? s : best), ended[0])
+    ? ended.reduce(
+        (best, s) => (s.totalKills > best.totalKills ? s : best),
+        ended[0],
+      )
     : null;
 
   // 7. Longest session
   const longestSession = ended.length
-    ? ended.reduce((best, s) => (s.totalMatches > best.totalMatches ? s : best), ended[0])
+    ? ended.reduce(
+        (best, s) => (s.totalMatches > best.totalMatches ? s : best),
+        ended[0],
+      )
     : null;
 
   // 8. Best K/D session (kills per match)
   const bestKDSession = ended.length
     ? ended
         .filter((s) => s.totalMatches >= 3)
-        .reduce(
-          (best, s) => {
-            const kd = s.totalKills / Math.max(1, s.totalMatches);
-            const bestKD = best.totalKills / Math.max(1, best.totalMatches);
-            return kd > bestKD ? s : best;
-          },
-          ended[0]
-        )
+        .reduce((best, s) => {
+          const kd = s.totalKills / Math.max(1, s.totalMatches);
+          const bestKD = best.totalKills / Math.max(1, best.totalMatches);
+          return kd > bestKD ? s : best;
+        }, ended[0])
     : null;
 
   // ── Summary counts ──
-  const totalWins   = matches.filter((m) => m.placement === 1).length;
-  const totalKills  = matches.reduce((a, m) => a + m.kills, 0);
+  const totalWins = matches.filter((m) => m.placement === 1).length;
+  const totalKills = matches.reduce((a, m) => a + m.kills, 0);
 
   const trophies = [
     {
@@ -334,7 +365,9 @@ export default function TrophyCabinetScreen() {
       iconName: "trophy-outline" as keyof typeof Ionicons.glyphMap,
       color: GOLD,
       tier: "gold" as const,
-      value: bestWinPctSession ? `${bestWinPctSession.winPercentage.toFixed(0)}%` : null,
+      value: bestWinPctSession
+        ? `${bestWinPctSession.winPercentage.toFixed(0)}%`
+        : null,
       sub: bestWinPctSession
         ? `${bestWinPctSession.wins}W / ${bestWinPctSession.totalMatches} matches · ${fmtDate(bestWinPctSession.createdAt)}`
         : null,
@@ -344,7 +377,9 @@ export default function TrophyCabinetScreen() {
       iconName: "podium-outline" as keyof typeof Ionicons.glyphMap,
       color: GREEN,
       tier: "silver" as const,
-      value: bestPlacementSession ? `#${bestPlacementSession.averagePlacement.toFixed(1)} avg` : null,
+      value: bestPlacementSession
+        ? `#${bestPlacementSession.averagePlacement.toFixed(1)} avg`
+        : null,
       sub: bestPlacementSession
         ? `${bestPlacementSession.totalMatches} matches · ${fmtDate(bestPlacementSession.createdAt)}`
         : null,
@@ -354,7 +389,9 @@ export default function TrophyCabinetScreen() {
       iconName: "pulse-outline" as keyof typeof Ionicons.glyphMap,
       color: PURPLE,
       tier: "silver" as const,
-      value: bestMentalSession ? `${bestMentalSession.averageMental.toFixed(1)} / 10` : null,
+      value: bestMentalSession
+        ? `${bestMentalSession.averageMental.toFixed(1)} / 10`
+        : null,
       sub: bestMentalSession
         ? `${bestMentalSession.totalMatches} matches · ${fmtDate(bestMentalSession.createdAt)}`
         : null,
@@ -396,15 +433,24 @@ export default function TrophyCabinetScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={s.scroll}>
-
+      <ScrollView
+        style={{ flex: 1, backgroundColor: BG }}
+        contentContainerStyle={s.scroll}
+      >
         {/* ── Header ── */}
         <Animated.View
           style={[
             s.header,
             {
               opacity: headerAnim,
-              transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }],
+              transform: [
+                {
+                  translateY: headerAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-10, 0],
+                  }),
+                },
+              ],
             },
           ]}
         >
@@ -420,16 +466,32 @@ export default function TrophyCabinetScreen() {
         {/* ── Summary strip ── */}
         <View style={s.summaryStrip}>
           {[
-            { label: "MATCHES", value: matches.length.toString(),  color: PURPLE },
-            { label: "TOTAL WINS",  value: totalWins.toString(),   color: AMBER },
-            { label: "TOTAL KILLS", value: totalKills.toLocaleString(), color: RED },
-            { label: "SESSIONS",    value: ended.length.toString(), color: BLUE },
+            {
+              label: "MATCHES",
+              value: matches.length.toString(),
+              color: PURPLE,
+            },
+            { label: "TOTAL WINS", value: totalWins.toString(), color: AMBER },
+            {
+              label: "TOTAL KILLS",
+              value: totalKills.toLocaleString(),
+              color: RED,
+            },
+            { label: "SESSIONS", value: ended.length.toString(), color: BLUE },
           ].map((item, i, arr) => (
             <View
               key={item.label}
-              style={[s.summaryItem, i < arr.length - 1 && { borderRightWidth: 1, borderColor: BORDER }]}
+              style={[
+                s.summaryItem,
+                i < arr.length - 1 && {
+                  borderRightWidth: 1,
+                  borderColor: BORDER,
+                },
+              ]}
             >
-              <Text style={[s.summaryVal, { color: item.color }]}>{item.value}</Text>
+              <Text style={[s.summaryVal, { color: item.color }]}>
+                {item.value}
+              </Text>
               <Text style={s.summaryLbl}>{item.label}</Text>
             </View>
           ))}
@@ -454,7 +516,7 @@ export default function TrophyCabinetScreen() {
               />
             ) : (
               <EmptyTrophy key={t.label} label={t.label} />
-            )
+            ),
           )}
         </View>
 
@@ -489,9 +551,14 @@ const s = StyleSheet.create({
     marginTop: 10,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: CARD_BG, borderWidth: 1, borderColor: BORDER,
-    alignItems: "center", justifyContent: "center",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+    alignItems: "center",
+    justifyContent: "center",
   },
   spacer: { width: 36, height: 36 },
   screenTitle: {
@@ -517,7 +584,12 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   summaryVal: { fontSize: 18, fontWeight: "700", marginBottom: 2 },
-  summaryLbl: { color: "#444", fontSize: 7, letterSpacing: 1.5, fontWeight: "600" },
+  summaryLbl: {
+    color: "#444",
+    fontSize: 7,
+    letterSpacing: 1.5,
+    fontWeight: "600",
+  },
 
   // Section label
   sectionLabel: {
@@ -556,7 +628,9 @@ const s = StyleSheet.create({
   },
   trophyAccent: {
     position: "absolute",
-    top: 0, left: 20, right: 20,
+    top: 0,
+    left: 20,
+    right: 20,
     height: 1.5,
     opacity: 0.6,
     borderBottomLeftRadius: 2,
@@ -564,13 +638,16 @@ const s = StyleSheet.create({
   },
   tierDot: {
     position: "absolute",
-    top: 10, right: 10,
-    width: 6, height: 6,
+    top: 10,
+    right: 10,
+    width: 6,
+    height: 6,
     borderRadius: 3,
     opacity: 0.8,
   },
   trophyIconWrap: {
-    width: 40, height: 40,
+    width: 40,
+    height: 40,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",

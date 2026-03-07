@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { AuthContext } from "../../services/authProvider";
+import { AuthContext, useAuth } from "../../services/authProvider";
 import { useSessionsData } from "@/hooks/useSessionsData";
 import LiveDot from "@/components/session/LiveDot";
 import StormEye from "@/components/session/StormEye";
@@ -36,7 +36,7 @@ function timeAgo(date: Date) {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function SessionsOverview() {
-  const user = useContext(AuthContext);
+const { user } = useAuth();
   const [sessPage, setSessPage] = useState(0);
   const SESS_PAGE_SIZE = 5;
 
@@ -398,7 +398,6 @@ const s = StyleSheet.create({
     letterSpacing: 1,
     fontWeight: "600",
   },
-  // Back button — remove text arrow style, chevron handles it now
   backBtn: {
     width: 36,
     height: 36,
@@ -410,7 +409,6 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // ADD MATCH button — icon + text row
  btnContinue: {
   flex: 2,
   backgroundColor: PURPLE + "28",

@@ -3,13 +3,13 @@ import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { doc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../services/firebase";
-import { AuthContext } from "../services/authProvider";
+import { AuthContext, useAuth } from "../services/authProvider";
 import { Session } from "../types/session";
 import { Match } from "../types/match";
 
 export default function SessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const user = useContext(AuthContext);
+const { user } = useAuth();
   const [session, setSession] = useState<Session | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);

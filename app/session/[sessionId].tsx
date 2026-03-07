@@ -11,7 +11,7 @@ import {
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { useContext, useState } from "react";
 import { db } from "../../services/firebase";
-import { AuthContext } from "../../services/authProvider";
+import { AuthContext, useAuth } from "../../services/authProvider";
 import {
   collection,
   query,
@@ -39,7 +39,7 @@ const BORDER = "#1e1e30";
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function SessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const user = useContext(AuthContext);
+const { user } = useAuth();
   const { skins } = useContext(SkinsContext);
   const [ending, setEnding] = useState(false);
   const [editingMatch, setEditingMatch] = useState<any | null>(null);

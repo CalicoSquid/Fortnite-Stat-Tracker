@@ -1,4 +1,3 @@
-// app/login.tsx
 import { useRef, useEffect, useState } from "react";
 import {
   View,
@@ -9,9 +8,7 @@ import {
   StyleSheet,
   Easing,
 } from "react-native";
-import { router } from "expo-router";
-import { auth } from "../services/firebase";
-import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { useGoogleSignIn } from "../hooks/useGoogleSignin";
 
 const PURPLE = "#8b5cf6";
 const PURPLE_DARK = "#7c3aed";
@@ -20,9 +17,7 @@ const CARD_BG = "#0f0f1a";
 const BORDER = "#1e1e30";
 
 export default function LoginScreen() {
-  const [loading, setLoading] = useState(false);
-  const [hasExistingUser, setHasExistingUser] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const { signIn, googleLoading, error } = useGoogleSignIn();
 
   const btnScale = useRef(new Animated.Value(1)).current;
   const glowOpacity = useRef(new Animated.Value(0.5)).current;
@@ -34,20 +29,7 @@ export default function LoginScreen() {
   const ring2 = useRef(new Animated.Value(1)).current;
   const ring3 = useRef(new Animated.Value(1)).current;
 
-  // Check auth state once on mount — don't auto-redirect, just detect
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setHasExistingUser(!!user);
-      setChecked(true);
-      unsubscribe(); // only need the first emission, then stop listening
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Run entrance animations after auth check resolves
-  useEffect(() => {
-    if (!checked) return;
-
     Animated.sequence([
       Animated.delay(80),
       Animated.parallel([
@@ -79,35 +61,7 @@ export default function LoginScreen() {
     pulseRing(ring1, 0).start();
     pulseRing(ring2, 400).start();
     pulseRing(ring3, 800).start();
-  }, [checked]);
-
-  const handleEnter = async () => {
-    if (loading) return;
-    if (hasExistingUser) {
-      // Already have a user — just navigate home, no new sign-in needed
-      router.replace("/");
-      return;
-    }
-    // First time — create anonymous account
-    setLoading(true);
-    try {
-      await signInAnonymously(auth);
-      router.replace("/");
-    } catch (err) {
-      console.error("Sign in failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Blank screen while checking auth — prevents flash
-  if (!checked) {
-    return (
-      <View style={{ flex: 1, backgroundColor: BG, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator color={PURPLE} />
-      </View>
-    );
-  }
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -132,14 +86,10 @@ export default function LoginScreen() {
       <Animated.View style={[styles.card, { opacity: cardOpacity, transform: [{ translateY: cardY }] }]}>
         <View style={styles.cardTopBorder} />
 
-        <Text style={styles.cardTitle}>
-          {hasExistingUser ? "WELCOME BACK" : "READY TO DROP?"}
-        </Text>
-        <Text style={styles.cardSub}>
-          {hasExistingUser
-            ? "Your stats are waiting."
-            : "Your stats. Your sessions. Your edge."}
-        </Text>
+        <Text style={styles.cardTitle}>WELCOME BACK</Text>
+        <Text style={styles.cardSub}>Sign in to access your stats.</Text>
+
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
         <Animated.View style={{
           shadowOpacity: glowOpacity,
@@ -150,32 +100,24 @@ export default function LoginScreen() {
           alignSelf: "stretch",
         }}>
           <Pressable
-            style={styles.enterBtn}
-            onPress={handleEnter}
+            style={styles.googleBtn}
+            onPress={signIn}
             onPressIn={() => Animated.spring(btnScale, { toValue: 0.96, useNativeDriver: true }).start()}
             onPressOut={() => Animated.spring(btnScale, { toValue: 1, useNativeDriver: true }).start()}
-            disabled={loading}
+            disabled={googleLoading}
           >
-            {loading ? (
+            {googleLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Text style={styles.enterBtnEmoji}>
-                  {hasExistingUser ? "🎮" : "🪂"}
-                </Text>
-                <Text style={styles.enterBtnText}>
-                  {hasExistingUser ? "CONTINUE" : "ENTER"}
-                </Text>
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.googleBtnText}>SIGN IN WITH GOOGLE</Text>
               </>
             )}
           </Pressable>
         </Animated.View>
 
-        <Text style={styles.disclaimer}>
-          {hasExistingUser
-            ? "Signed in · Your data is saved"
-            : "No account needed · Private session"}
-        </Text>
+        <Text style={styles.disclaimer}>Pro account · Stats backed up to cloud</Text>
       </Animated.View>
 
     </View>
@@ -191,8 +133,6 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 32,
   },
-
-  // ── Rings ──
   ringsContainer: {
     width: 180, height: 180,
     alignItems: "center",
@@ -205,7 +145,7 @@ const styles = StyleSheet.create({
   },
   ring1: { width: 180, height: 180, borderColor: "rgba(139,92,246,0.1)" },
   ring2: { width: 130, height: 130, borderColor: "rgba(139,92,246,0.2)" },
-  ring3: { width: 86,  height: 86,  borderColor: "rgba(139,92,246,0.35)" },
+  ring3: { width: 86, height: 86, borderColor: "rgba(139,92,246,0.35)" },
   ringCore: {
     width: 52, height: 52,
     borderRadius: 26,
@@ -219,8 +159,6 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   ringCoreEmoji: { fontSize: 24 },
-
-  // ── Title ──
   titleBlock: {
     alignItems: "center",
     gap: 6,
@@ -239,8 +177,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
   },
-
-  // ── Card ──
   card: {
     width: "100%",
     backgroundColor: CARD_BG,
@@ -258,8 +194,6 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: PURPLE,
     opacity: 0.7,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
   },
   cardTitle: {
     fontFamily: "BurbankBlack",
@@ -274,9 +208,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textAlign: "center",
   },
-
-  // ── Button ──
-  enterBtn: {
+  errorText: {
+    color: "#ef4444",
+    fontSize: 12,
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  googleBtn: {
     backgroundColor: PURPLE,
     borderRadius: 14,
     paddingVertical: 16,
@@ -285,14 +223,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-  enterBtnEmoji: { fontSize: 20 },
-  enterBtnText: {
-    fontFamily: "BurbankBlack",
-    fontSize: 22,
+  googleIcon: {
+    fontSize: 18,
     color: "#fff",
-    letterSpacing: 4,
+    fontWeight: "700",
   },
-
+  googleBtnText: {
+    fontFamily: "BurbankBlack",
+    fontSize: 18,
+    color: "#fff",
+    letterSpacing: 3,
+  },
   disclaimer: {
     color: "#333",
     fontSize: 11,

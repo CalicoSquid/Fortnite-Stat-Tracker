@@ -1,40 +1,83 @@
-// services/AuthProvider.tsx
-import React, { createContext, useEffect, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signInAnonymously, User } from "firebase/auth";
 
-export const AuthContext = createContext<User | null>(null);
+// ── Types ──────────────────────────────────────────────────────────────────
+
+export type AuthState = {
+  user: User | null;
+  isPro: boolean;
+  isAnonymous: boolean;
+  loading: boolean;
+};
+
+// ── Context ────────────────────────────────────────────────────────────────
+
+const DEFAULT: AuthState = {
+  user: null,
+  isPro: false,
+  isAnonymous: true,
+  loading: true,
+};
+
+export const AuthContext = createContext<AuthState>(DEFAULT);
+
+// ── Hook ───────────────────────────────────────────────────────────────────
+
+export function useAuth(): AuthState {
+  return useContext(AuthContext);
+}
+
+// ── Intentional sign out flag ──────────────────────────────────────────────
+
+let intentionalSignOut = false;
+
+export function markIntentionalSignOut() {
+  intentionalSignOut = true;
+}
+
+// ── Provider ───────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<AuthState>(DEFAULT);
 
   useEffect(() => {
-    // Listen for auth state — fires immediately with current user or null
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Already signed in (anonymous or otherwise)
-        setUser(firebaseUser);
+        setState({
+          user: firebaseUser,
+          isPro: !firebaseUser.isAnonymous,
+          isAnonymous: firebaseUser.isAnonymous,
+          loading: false,
+        });
       } else {
-        // No user — sign in anonymously automatically
-        try {
-          const { user: anonUser } = await signInAnonymously(auth);
-          setUser(anonUser);
-        } catch (err) {
-          console.error("Anonymous sign-in failed:", err);
+        if (intentionalSignOut) {
+          // Pro user logged out deliberately — show login screen
+          intentionalSignOut = false;
+          setState({ user: null, isPro: false, isAnonymous: true, loading: false });
+        } else {
+          // Cold start — auto sign in anonymously
+          try {
+            await signInAnonymously(auth);
+            // onAuthStateChanged fires again with the new anonymous user
+          } catch (err) {
+            console.error("Anonymous sign-in failed:", err);
+            setState({ user: null, isPro: false, isAnonymous: true, loading: false });
+          }
         }
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  if (loading) return null;
+  if (state.loading) return null;
 
-  return (
-    <AuthContext.Provider value={user}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }

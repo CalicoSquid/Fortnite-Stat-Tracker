@@ -13,9 +13,10 @@
       "supportsTablet": true
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#0d0d14"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -27,6 +28,7 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-google-signin/google-signin",
       [
         "expo-splash-screen",
         {
@@ -35,6 +37,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#0d0d14",
           "dark": {
+            "image": "./assets/images/app-icon.png",
             "backgroundColor": "#0d0d14"
           }
         }

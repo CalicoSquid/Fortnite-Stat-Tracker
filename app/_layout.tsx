@@ -2,11 +2,12 @@
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { AuthProvider, AuthContext } from "../services/authProvider";
+import { AuthProvider, AuthContext, useAuth } from "../services/authProvider";
 import { useContext, createContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoginScreen from "./login";
 import CustomSplash from "../components/Customsplash";
+import { configureGoogleSignIn } from "../services/googleAuth";
 
 // Hold the native splash until we're ready
 SplashScreen.preventAutoHideAsync();
@@ -46,8 +47,10 @@ async function fetchSkins(): Promise<Skin[]> {
         name: item.name,
         image: item.images?.icon,
         rarity: item.rarity?.value,
-        variants: item.variants?.flatMap((v: any) =>
-          v.options?.map((o: any) => ({ name: o.name, image: o.image })) || []
+        variants: item.variants?.flatMap(
+          (v: any) =>
+            v.options?.map((o: any) => ({ name: o.name, image: o.image })) ||
+            [],
         ),
       }))
       .filter((s: Skin) => !!s.id && !!s.name && !!s.image);
@@ -67,7 +70,12 @@ async function loadSkins(): Promise<Skin[]> {
     const cached = await AsyncStorage.getItem(SKINS_KEY);
     const lastFetch = await AsyncStorage.getItem(SKINS_LAST_FETCH);
     const now = Date.now();
-    if (cached && cached !== "[]" && lastFetch && now - parseInt(lastFetch, 10) < SKINS_CACHE_TTL) {
+    if (
+      cached &&
+      cached !== "[]" &&
+      lastFetch &&
+      now - parseInt(lastFetch, 10) < SKINS_CACHE_TTL
+    ) {
       return JSON.parse(cached);
     }
     return await fetchSkins();
@@ -79,17 +87,21 @@ async function loadSkins(): Promise<Skin[]> {
 
 // ----- AppStack -----
 function AppStack() {
-  const user = useContext(AuthContext);
+  const { user, isAnonymous } = useAuth();
   const [skins, setSkins] = useState<Skin[]>([]);
   const [loadingSkins, setLoadingSkins] = useState(true);
 
   useEffect(() => {
-    loadSkins().then((s) => {
-      setSkins(s);
-      setLoadingSkins(false);
-    }).catch(() => setLoadingSkins(false));
+    loadSkins()
+      .then((s) => {
+        setSkins(s);
+        setLoadingSkins(false);
+      })
+      .catch(() => setLoadingSkins(false));
   }, []);
 
+  // Only show login if there's no user at all
+  // Anonymous users go straight to home
   if (!user) return <LoginScreen />;
 
   return (
@@ -101,6 +113,8 @@ function AppStack() {
 
 // ----- Root Layout -----
 export default function Layout() {
+  configureGoogleSignIn();
+
   const [fontsLoaded] = useFonts({
     BurbankBlack: require("../assets/fonts/BBCB.otf"),
     Raleway: require("../assets/fonts/Raleway.ttf"),

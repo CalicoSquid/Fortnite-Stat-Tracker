@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "445814891600",
+    "project_id": "high-ground-2190e",
+    "storage_bucket": "high-ground-2190e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:445814891600:android:3362b944fc56605d8f1d55",
+        "android_client_info": {
+          "package_name": "com.calicosquid.highground"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "445814891600-ou1hp05eas30j8og4ftob40igsefd3td.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.calicosquid.highground",
+            "certificate_hash": "8486cd026920820975781da64fabcb81fdf0ea8b"
+          }
+        },
+        {
+          "client_id": "445814891600-km7n29gavqfp16gm2geb7rh2i3h1k5tg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXHE0xafgbcFf5Q-siHtYwOg5ciqZyYQo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "445814891600-km7n29gavqfp16gm2geb7rh2i3h1k5tg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
