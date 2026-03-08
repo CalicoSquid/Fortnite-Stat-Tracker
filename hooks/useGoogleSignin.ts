@@ -23,7 +23,10 @@ export function useGoogleSignIn() {
     const result = await signInWithGoogle();
 
     if (!result.success && !result.cancelled) {
-      setState({ googleLoading: false, error: result.error ?? "Sign in failed" });
+      setState({
+        googleLoading: false,
+        error: result.error ?? "Sign in failed",
+      });
     } else {
       setState({ googleLoading: false, error: null });
     }

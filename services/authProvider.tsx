@@ -15,6 +15,7 @@ export type AuthState = {
   isPro: boolean;
   isAnonymous: boolean;
   loading: boolean;
+  refreshUser: () => Promise<void>;
 };
 
 // ── Context ────────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ const DEFAULT: AuthState = {
   isPro: false,
   isAnonymous: true,
   loading: true,
+  refreshUser: async () => {},
 };
 
 export const AuthContext = createContext<AuthState>(DEFAULT);
@@ -47,28 +49,57 @@ export function markIntentionalSignOut() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(DEFAULT);
 
+  const refreshUser = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
+    await firebaseUser.reload();
+    setState((prev) => ({
+      ...prev,
+      user: firebaseUser,
+      isPro: !firebaseUser.isAnonymous,
+      isAnonymous: firebaseUser.isAnonymous,
+      loading: false,
+    }));
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        console.log(
+          "AUTH STATE:",
+          firebaseUser.uid,
+          "isAnonymous:",
+          firebaseUser.isAnonymous,
+        );
         setState({
           user: firebaseUser,
           isPro: !firebaseUser.isAnonymous,
           isAnonymous: firebaseUser.isAnonymous,
           loading: false,
+          refreshUser,
         });
       } else {
         if (intentionalSignOut) {
-          // Pro user logged out deliberately — show login screen
           intentionalSignOut = false;
-          setState({ user: null, isPro: false, isAnonymous: true, loading: false });
+          setState({
+            user: null,
+            isPro: false,
+            isAnonymous: true,
+            loading: false,
+            refreshUser,
+          });
         } else {
-          // Cold start — auto sign in anonymously
           try {
             await signInAnonymously(auth);
-            // onAuthStateChanged fires again with the new anonymous user
           } catch (err) {
             console.error("Anonymous sign-in failed:", err);
-            setState({ user: null, isPro: false, isAnonymous: true, loading: false });
+            setState({
+              user: null,
+              isPro: false,
+              isAnonymous: true,
+              loading: false,
+              refreshUser,
+            });
           }
         }
       }
@@ -79,5 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (state.loading) return null;
 
-  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ ...state, refreshUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

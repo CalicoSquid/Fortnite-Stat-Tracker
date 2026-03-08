@@ -183,11 +183,10 @@ export default function TimeAnalysis({
           <View key={b.label} style={{ gap: 6 }}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={[s.dot, { backgroundColor: b.color }]} />
-              <Text
-                style={[s.label, { color: b.color, marginLeft: 8, flex: 1 }]}
-              >
-                {b.label}
-              </Text>
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={[s.label, { color: b.color }]}>{b.label}</Text>
+                <Text style={s.subLabel}>{b.count} matches</Text>
+              </View>
               <View style={{ flexDirection: "row", gap: 16 }}>
                 <Text style={s.colVal}>{b.avgKills.toFixed(1)}</Text>
                 <Text style={s.colVal}>#{b.avgPlace.toFixed(0)}</Text>

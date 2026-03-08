@@ -1,5 +1,6 @@
 import React, { useContext } from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SkinsContext } from "@/app/_layout";
 import { avg, AnalyticsMatch } from "@/constants/analytics";
 
@@ -9,6 +10,23 @@ const AMBER = "#f59e0b";
 const GREEN = "#22c55e";
 const RED = "#ef4444";
 const INNER_BG = "#0a0a12";
+
+type Highlight = {
+  label: string;
+  color: string;
+  data: SkinData;
+  stat: string;
+  icon: keyof typeof Ionicons.glyphMap;
+};
+
+type SkinData = {
+  id: string;
+  wins: number;
+  top10: number;
+  totalKills: number;
+  avgPlace: number;
+  count: number;
+};
 
 const EmptyState = ({ message }: { message: string }) => (
   <View style={s.emptyState}>
@@ -27,7 +45,7 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
 
   const getSkin = (id: string) => skins.find((s) => s.id === id);
 
-  const skinData = skinIds.map((id) => {
+  const skinData: SkinData[] = skinIds.map((id) => {
     const ms = matches.filter((m) => m.skinId === id);
     const wins = ms.filter((m) => m.placement === 1).length;
     const top10 = ms.filter((m) => m.placement <= 10).length;
@@ -39,13 +57,16 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
   const totalMatches = matches.length;
   const overallWinRate =
     matches.filter((m) => m.placement === 1).length / totalMatches;
-  const dynamicMin = Math.max(3, Math.floor(totalMatches * 0.1));
+  const dynamicMin = Math.max(2, Math.floor(totalMatches / skinIds.length / 2));
 
   const byMostUsed = [...skinData].sort((a, b) => b.count - a.count)[0];
   const byWins = [...skinData].sort((a, b) => b.wins - a.wins)[0];
   const byKills = [...skinData].sort((a, b) => b.totalKills - a.totalKills)[0];
   const byTop10 = [...skinData].sort((a, b) => b.top10 - a.top10)[0];
-  const byPlace = [...skinData].sort((a, b) => a.avgPlace - b.avgPlace)[0];
+
+  const byPlace = [...skinData]
+    .filter((s) => s.count >= dynamicMin)
+    .sort((a, b) => a.avgPlace - b.avgPlace)[0];
 
   const worst = [...skinData]
     .filter((s) => {
@@ -59,42 +80,46 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
       return b.avgPlace - a.avgPlace;
     })[0];
 
-  const highlights = [
+  const highlights: Highlight[] = [
     {
       label: "MOST USED",
       color: PURPLE,
       data: byMostUsed,
       stat: `${byMostUsed.count} matches`,
-      icon: "🔁",
+      icon: "repeat",
     },
     {
       label: "MOST WINS",
       color: AMBER,
       data: byWins,
       stat: `${byWins.wins} wins`,
-      icon: "👑",
+      icon: "trophy",
     },
     {
       label: "MOST KILLS",
       color: RED,
       data: byKills,
       stat: `${byKills.totalKills} total kills`,
-      icon: "⚔️",
+      icon: "flash",
     },
     {
       label: "MOST TOP 10s",
       color: BLUE,
       data: byTop10,
       stat: `${byTop10.top10} top 10s`,
-      icon: "🎯",
+      icon: "medal",
     },
-    {
-      label: "BEST PLACEMENT",
-      color: GREEN,
-      data: byPlace,
-      stat: `#${byPlace.avgPlace.toFixed(1)} avg`,
-      icon: "📍",
-    },
+    ...(byPlace
+      ? [
+          {
+            label: "BEST PLACEMENT",
+            color: GREEN,
+            data: byPlace,
+            stat: `#${byPlace.avgPlace.toFixed(1)} avg`,
+            icon: "ribbon" as keyof typeof Ionicons.glyphMap,
+          },
+        ]
+      : []),
     ...(worst
       ? [
           {
@@ -102,7 +127,7 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
             color: "#555",
             data: worst,
             stat: `#${worst.avgPlace.toFixed(1)} avg · ${worst.wins} wins`,
-            icon: "💀",
+            icon: "skull" as keyof typeof Ionicons.glyphMap,
           },
         ]
       : []),
@@ -122,7 +147,7 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
               />
             ) : (
               <View style={[s.skinThumb, s.skinThumbFallback]}>
-                <Text style={{ fontSize: 18 }}>👤</Text>
+                <Ionicons name="person" size={24} color="#444" />
               </View>
             )}
             <View style={{ flex: 1, paddingHorizontal: 12 }}>
@@ -130,8 +155,10 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
               <Text style={s.skinName}>{skin?.name ?? data.id}</Text>
               <Text style={s.skinMatchCount}>{data.count} matches played</Text>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ fontSize: 20 }}>{icon}</Text>
+            <View style={s.rightCol}>
+              <View style={[s.iconWrap, { backgroundColor: color + "18", borderColor: color + "33" }]}>
+                <Ionicons name={icon} size={16} color={color} />
+              </View>
               <Text style={[s.skinStat, { color }]}>{stat}</Text>
             </View>
           </View>
@@ -156,21 +183,51 @@ const s = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#16162a",
   },
-  skinThumbFallback: { alignItems: "center", justifyContent: "center" },
+  skinThumbFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   skinHighlightLabel: {
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1.5,
     marginBottom: 2,
   },
-  skinName: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  skinMatchCount: { color: "#444", fontSize: 10, marginTop: 2 },
+  skinName: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  skinMatchCount: {
+    color: "#444",
+    fontSize: 10,
+    marginTop: 2,
+  },
   skinStat: {
     fontSize: 11,
     fontWeight: "700",
     marginTop: 4,
     textAlign: "right",
   },
-  emptyState: { paddingVertical: 20, alignItems: "center" },
-  emptyStateText: { color: "#444", fontSize: 12, letterSpacing: 0.5 },
+  rightCol: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  iconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyState: {
+    paddingVertical: 20,
+    alignItems: "center",
+  },
+  emptyStateText: {
+    color: "#444",
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
 });

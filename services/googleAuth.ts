@@ -12,7 +12,8 @@ import { markIntentionalSignOut } from "./authProvider";
 
 export function configureGoogleSignIn() {
   GoogleSignin.configure({
-    webClientId: "445814891600-km7n29gavqfp16gm2geb7rh2i3h1k5tg.apps.googleusercontent.com",
+    webClientId:
+      "445814891600-km7n29gavqfp16gm2geb7rh2i3h1k5tg.apps.googleusercontent.com",
   });
 }
 
@@ -30,7 +31,11 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
     idToken = signInResult.data?.idToken ?? null;
 
     if (!idToken) {
-      return { success: false, cancelled: false, error: "No ID token returned" };
+      return {
+        success: false,
+        cancelled: false,
+        error: "No ID token returned",
+      };
     }
 
     const credential = GoogleAuthProvider.credential(idToken);
@@ -38,18 +43,24 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
 
     if (currentUser?.isAnonymous) {
       await linkWithCredential(currentUser, credential);
+      await currentUser.reload(); // ← add this
+      console.log("AFTER RELOAD:", auth.currentUser?.isAnonymous);
+
     } else {
       await signInWithCredential(auth, credential);
     }
 
     return { success: true };
-
   } catch (err: any) {
     if (err.code === statusCodes.SIGN_IN_CANCELLED) {
       return { success: false, cancelled: true };
     }
     if (err.code === statusCodes.IN_PROGRESS) {
-      return { success: false, cancelled: false, error: "Sign in already in progress" };
+      return {
+        success: false,
+        cancelled: false,
+        error: "Sign in already in progress",
+      };
     }
     // Google account already exists in Firebase — sign in directly instead of linking
     if (
@@ -63,7 +74,11 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
           return { success: true };
         } catch (fallbackErr: any) {
           console.error("[googleAuth] Fallback sign in failed:", fallbackErr);
-          return { success: false, cancelled: false, error: fallbackErr.message };
+          return {
+            success: false,
+            cancelled: false,
+            error: fallbackErr.message,
+          };
         }
       }
     }
