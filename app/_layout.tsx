@@ -8,6 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoginScreen from "./login";
 import CustomSplash from "../components/Customsplash";
 import { configureGoogleSignIn } from "../services/googleAuth";
+import { autoCloseStaleSessions } from "@/services/autoCloseStaleSessions";
 
 // Hold the native splash until we're ready
 SplashScreen.preventAutoHideAsync();
@@ -99,6 +100,13 @@ function AppStack() {
       })
       .catch(() => setLoadingSkins(false));
   }, []);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    autoCloseStaleSessions(user.uid).catch((err) =>
+      console.error("[autoClose] failed:", err),
+    );
+  }, [user?.uid]);
 
   // Only show login if there's no user at all
   // Anonymous users go straight to home

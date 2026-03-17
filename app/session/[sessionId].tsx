@@ -23,7 +23,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSessionData } from "@/hooks/useSessionData";
 import SessionStatGrid from "@/components/session/SessionStatGrid";
-import SessionMentalBar from "@/components/session/SessionMentalBar";
 import MatchListItem from "@/components/session/MatchListItem";
 import EditMatchModal from "@/components/session/EditMatchModal";
 import { SkinsContext } from "@/app/_layout";

@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 
 const INNER_BG = "#0a0a12";
-const PURPLE = "#8b5cf6";
 
 type Props = {
   label: string;

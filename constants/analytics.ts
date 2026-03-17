@@ -81,4 +81,23 @@ export interface AnalyticsSession {
   averageMental: number;
   wins: number;
   winPercentage: number;
+   startingMental?: number;
+  mode?: string;
+  goal?: string;
+}
+
+export function stateLabel(n: number): string {
+  const labels: Record<number, string> = {
+    1:  "Broken",
+    2:  "Tilted",
+    3:  "Frustrated",
+    4:  "Distracted",
+    5:  "Neutral",
+    6:  "Focused",
+    7:  "Dialled",
+    8:  "Confident",
+    9:  "Sharp",
+    10: "Locked In",
+  };
+  return labels[Math.round(Math.max(1, Math.min(10, n)))] ?? "Unknown";
 }

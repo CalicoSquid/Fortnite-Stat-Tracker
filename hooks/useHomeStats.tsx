@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef, useContext } from "react";
 import { Animated, Easing } from "react-native";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  getDocs,
+} from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "../services/authProvider";
 import { SkinsContext } from "../app/_layout";
@@ -16,6 +22,8 @@ export type HomeTotals = {
   kdRatio: number;
   last10: number[];
   topMode: string;
+  totalSessions: number;
+  avgPlacement: number;
 };
 
 export function useHomeStats() {
@@ -64,13 +72,18 @@ export function useHomeStats() {
   useEffect(() => {
     if (!user?.uid || skinLoading) return;
 
+    const fetchSessionCount = async (): Promise<number> => {
+      const snap = await getDocs(collection(db, "users", user.uid, "sessions"));
+      return snap.size;
+    };
+
     setLoading(true);
     const matchesRef = collection(db, "users", user.uid, "matches");
     const q = query(matchesRef, orderBy("date", "desc"));
 
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
+      async (snapshot) => {
         const matches = snapshot.docs.map((doc) => doc.data() as any);
 
         // ── Avatar: skin with most wins, fallback to most used ──
@@ -126,8 +139,13 @@ export function useHomeStats() {
         const top10 = matches.filter((m) => (m.placement ?? 0) <= 10).length;
         const wins = matches.filter((m) => (m.placement ?? 0) === 1).length;
         const winPercentage = totalMatches ? (wins / totalMatches) * 100 : 0;
-        const kdRatio = totalMatches ? totalKills / totalMatches : 0;
+        const deaths = totalMatches - wins;
+        const kdRatio = deaths > 0 ? totalKills / deaths : totalKills;
         const last10 = matches.slice(0, 10).map((m) => m.placement ?? 0);
+        const avgPlacement = totalMatches
+          ? matches.reduce((sum, m) => sum + (m.placement ?? 0), 0) / totalMatches
+          : 0;
+        const totalSessions = await fetchSessionCount();
 
         setTotals({
           matches: totalMatches,
@@ -138,6 +156,8 @@ export function useHomeStats() {
           last10,
           top10,
           topMode,
+          avgPlacement,
+          totalSessions,
         });
 
         // ── Entrance animation ──

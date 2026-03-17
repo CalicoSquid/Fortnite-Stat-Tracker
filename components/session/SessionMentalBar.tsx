@@ -1,33 +1,30 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { stateLabel } from "@/constants/analytics";
 
 const MENTAL_GRADIENT = [
   "#ff3b3b","#ff6f3b","#ff993b","#ffcc3b","#ffff3b",
   "#ccff3b","#99ff3b","#66ff3b","#33ff3b","#00ff00",
 ];
 
-const mentalLabel = (val: number) => {
-  if (val <= 3) return "TILTED";
-  if (val <= 6) return "NEUTRAL";
-  if (val <= 8) return "FOCUSED";
-  return "LOCKED IN";
-};
-
 interface Props {
   averageMental: number;
 }
 
 export default function SessionMentalBar({ averageMental }: Props) {
-  const mentalColor =
-    MENTAL_GRADIENT[Math.min(Math.round(averageMental) - 1, 9)] ?? "#8b5cf6";
+  const rounded = Math.min(Math.round(averageMental) - 1, 9);
+  const mentalColor = MENTAL_GRADIENT[rounded] ?? "#8b5cf6";
 
   return (
     <View style={s.mentalWrap}>
       <View style={s.mentalLabelRow}>
         <Text style={s.mentalLabel}>MENTAL STATE</Text>
-        <Text style={[s.mentalVal, { color: mentalColor }]}>
-          {averageMental.toFixed(1)} · {mentalLabel(Math.round(averageMental))}
-        </Text>
+        <View style={s.mentalValRow}>
+          
+          <Text style={[s.mentalWordLabel, { color: mentalColor }]}>
+            {stateLabel(Math.round(averageMental))}
+          </Text>
+        </View>
       </View>
       <View style={s.mentalTrack}>
         {MENTAL_GRADIENT.map((color, i) => (
@@ -42,7 +39,7 @@ export default function SessionMentalBar({ averageMental }: Props) {
         ))}
       </View>
       <View style={s.mentalEndLabels}>
-        <Text style={s.mentalEndLbl}>TILTED</Text>
+        <Text style={s.mentalEndLbl}>BROKEN</Text>
         <Text style={s.mentalEndLbl}>LOCKED IN</Text>
       </View>
     </View>
@@ -54,10 +51,13 @@ const s = StyleSheet.create({
   mentalLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-end",
     marginBottom: 8,
   },
   mentalLabel: { color: "#555", fontSize: 10, letterSpacing: 2, fontWeight: "600" },
-  mentalVal: { fontSize: 12, fontWeight: "700" },
+  mentalValRow: { alignItems: "flex-end", gap: 1 },
+  mentalNum: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
+  mentalWordLabel: { fontSize: 13, fontWeight: "800", letterSpacing: 0.5 },
   mentalTrack: {
     height: 10,
     backgroundColor: "#1a1a28",

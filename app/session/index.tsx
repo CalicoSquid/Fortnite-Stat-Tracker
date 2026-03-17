@@ -10,13 +10,19 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { AuthContext, useAuth } from "../../services/authProvider";
+import { useAuth } from "../../services/authProvider";
 import { useSessionsData } from "@/hooks/useSessionsData";
 import LiveDot from "@/components/session/LiveDot";
 import StormEye from "@/components/session/StormEye";
 import PastSessionRow from "@/components/session/PastSessionRow";
 import MentalBar from "@/components/session/MentalBar";
 import { Ionicons } from "@expo/vector-icons";
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "@/services/firebase";
+import { StartSessionModal } from "@/components/session/StartSessionModal";
+import { SessionSetup } from "@/hooks/useSessionsData";
+import { SessionSummaryModal } from "@/components/session/SessionSummaryModal";
+import { Session } from "@/types/session";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatTime(date: Date) {
@@ -36,8 +42,12 @@ function timeAgo(date: Date) {
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function SessionsOverview() {
-const { user } = useAuth();
+  const { user } = useAuth();
   const [sessPage, setSessPage] = useState(0);
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [summarySession, setSummarySession] = useState<Session | null>(null);
+  const [endingMentalSnapshot, setEndingMentalSnapshot] = useState(0);
+
   const SESS_PAGE_SIZE = 5;
 
   const {
@@ -77,6 +87,19 @@ const { user } = useAuth();
     sessPage * SESS_PAGE_SIZE,
     (sessPage + 1) * SESS_PAGE_SIZE,
   );
+
+  const testStaleSession = async () => {
+    const staleDate = new Date(Date.now() - 5 * 60 * 60 * 1000);
+    await addDoc(collection(db, "users", user.uid, "matches"), {
+      sessionId: activeSession?.id,
+      date: staleDate,
+      kills: 3,
+      placement: 5,
+      mode: "OG",
+      mentalState: 7,
+      notes: "test",
+    });
+  };
 
   const ScreenHeader = () => (
     <View style={s.screenHeader}>
@@ -177,7 +200,27 @@ const { user } = useAuth();
               <Ionicons name="add-circle-outline" size={18} color="#fff" />
               <Text style={s.btnContinueText}>ADD MATCH</Text>
             </Pressable>
-            <Pressable style={s.btnEnd} onPress={handleEndSession}>
+            <Pressable
+              style={s.btnEnd}
+              onPress={async () => {
+                const snapshot = stats.averageMental; // ← capture before reset
+                const sessionToSummarise = {
+                  ...activeSession,
+                  endedAt: new Date(),
+                  totalKills: stats.totalKills,
+                  totalMatches: stats.totalMatches,
+                  averagePlacement: stats.averagePlacement,
+                  wins: stats.wins,
+                  winPercentage:
+                    stats.totalMatches > 0
+                      ? (stats.wins / stats.totalMatches) * 100
+                      : 0,
+                } as Session;
+                await handleEndSession();
+                setEndingMentalSnapshot(snapshot); // ← store snapshot
+                setSummarySession(sessionToSummarise);
+              }}
+            >
               <Ionicons name="stop-circle-outline" size={18} color={GREEN} />
               <Text style={s.btnEndText}>END</Text>
             </Pressable>
@@ -220,7 +263,7 @@ const { user } = useAuth();
             </View>
           )}
 
-          <Pressable style={s.startBtn} onPress={handleStartSession}>
+          <Pressable style={s.startBtn} onPress={() => setShowStartModal(true)}>
             <View style={s.startBtnIconWrap}>
               <Ionicons name="play" size={18} color={PURPLE} />
             </View>
@@ -239,6 +282,23 @@ const { user } = useAuth();
           )}
         </>
       )}
+      <StartSessionModal
+        visible={showStartModal}
+        onClose={() => setShowStartModal(false)}
+        onStart={(setup: SessionSetup) => {
+          setShowStartModal(false);
+          handleStartSession(setup);
+        }}
+      />
+      <SessionSummaryModal
+        visible={!!summarySession}
+        session={summarySession}
+        endingMental={endingMentalSnapshot} // ← use snapshot, not live stats
+        onDismiss={() => {
+          setSummarySession(null);
+          router.replace("/");
+        }}
+      />
     </ScrollView>
   );
 }
@@ -409,18 +469,18 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
 
- btnContinue: {
-  flex: 2,
-  backgroundColor: PURPLE + "28",
-  borderRadius: 12,
-  paddingVertical: 15,
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-  borderWidth: 1,
-  borderColor: PURPLE + "70",
-},
+  btnContinue: {
+    flex: 2,
+    backgroundColor: PURPLE + "28",
+    borderRadius: 12,
+    paddingVertical: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: PURPLE + "70",
+  },
   btnContinueText: {
     color: "#fff",
     fontSize: 13,
@@ -450,16 +510,16 @@ const s = StyleSheet.create({
 
   // START button — matches Sessions tile on home
   startBtn: {
-  backgroundColor: "#1a1228",
-  borderRadius: 14,
-  height: 72,
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: 18,
-  borderWidth: 1,
-  borderColor: PURPLE + "80",
-  overflow: "hidden",
-},
+    backgroundColor: "#1a1228",
+    borderRadius: 14,
+    height: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: PURPLE + "80",
+    overflow: "hidden",
+  },
   startBtnIconWrap: {
     width: 38,
     height: 38,
@@ -478,5 +538,4 @@ const s = StyleSheet.create({
     letterSpacing: 2,
     flex: 1,
   },
-
 });

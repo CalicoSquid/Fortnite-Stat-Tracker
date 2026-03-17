@@ -71,7 +71,7 @@ export function StatsGraph({ totals, paddedLast10, animatedBars }: Props) {
                         left: 0,
                         right: 0,
                         borderRadius: 6,
-                        backgroundColor: isWin ? AMBER + "22" : barColor + "18",
+                        backgroundColor: isWin ? AMBER + "50" : barColor + "18",
                         borderWidth: 1,
                         borderColor: isWin ? AMBER + "88" : barColor + "66",
                         shadowColor: barColor,

@@ -84,6 +84,7 @@ export function HeroCard({
         <View style={styles.heroCard}>
           <View style={styles.cardTopBorder} />
 
+          {/* ── Player name + mode badge ── */}
           <View style={styles.heroHeaderRow}>
             <Pressable onPress={startEditing} style={styles.playerNameRow}>
               <Text
@@ -95,7 +96,6 @@ export function HeroCard({
               </Text>
               <Text style={styles.editPencil}>✎</Text>
             </Pressable>
-
             <View
               style={[
                 styles.modeBadge,
@@ -111,6 +111,7 @@ export function HeroCard({
             </View>
           </View>
 
+          {/* ── Avatar + stats ── */}
           <View style={styles.heroContentRow}>
             {avatarImage ? (
               <Image source={{ uri: avatarImage }} style={styles.avatar} />
@@ -222,6 +223,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
     overflow: "hidden",
+    gap: 16,
   },
   cardTopBorder: {
     position: "absolute",
@@ -238,7 +240,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
   },
   playerNameRow: {
     flexDirection: "row",
@@ -270,18 +271,17 @@ const styles = StyleSheet.create({
   },
   heroContentRow: {
     flexDirection: "row",
+    alignItems: "stretch",
     gap: 14,
   },
   avatar: {
     width: 110,
-    height: 145,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: BORDER,
   },
   avatarPlaceholder: {
     width: 110,
-    height: 145,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(139,92,246,0.3)",
@@ -291,6 +291,12 @@ const styles = StyleSheet.create({
   },
   avatarBolt: {
     fontSize: 44,
+  },
+  statsColumns: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
   zeroState: {
     flex: 1,
@@ -309,11 +315,5 @@ const styles = StyleSheet.create({
     color: "#555",
     lineHeight: 18,
     letterSpacing: 0.3,
-  },
-  statsColumns: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
   },
 });

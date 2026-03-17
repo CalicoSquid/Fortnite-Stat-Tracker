@@ -59,7 +59,7 @@ export default function ViewDataScreen() {
         {/* ── Header ── */}
         <View style={s.screenHeader}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Text style={s.backArrow}>‹</Text>
+            <Ionicons name="chevron-back" size={20} color="#fff" />
           </TouchableOpacity>
           <Text style={s.screenTitle}>ANALYTICS</Text>
           <View style={s.spacer} />
@@ -100,7 +100,7 @@ export default function ViewDataScreen() {
           accentColor={GREEN}
           defaultOpen
         >
-          <MentalVsResults matches={matches} />
+          <MentalVsResults matches={matches} sessions={sessions} />
         </AnalyticsCard>
 
         <AnalyticsCard
@@ -109,7 +109,7 @@ export default function ViewDataScreen() {
           subtitle={`${matches.length} matches logged`}
           accentColor={PURPLE}
         >
-          <MatchHistory matches={matches} />
+          <MatchHistory matches={matches} uid={user?.uid ?? ""} />
         </AnalyticsCard>
 
         <AnalyticsCard
@@ -188,7 +188,6 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backArrow: { color: "#fff", fontSize: 22, lineHeight: 24 },
   spacer: { width: 36, height: 36 },
   screenTitle: {
     color: "#fff",

@@ -6,8 +6,11 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  ScrollView,
+  Keyboard,
+  KeyboardEvent,
 } from "react-native";
-import { useState, useContext, useRef } from "react";
+import { useState, useContext, useRef, useEffect } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { AuthContext, useAuth } from "../../services/authProvider";
 import {
@@ -23,7 +26,6 @@ import { db } from "../../services/firebase";
 import gradientColors from "@/constants/gradient";
 import { SkinsContext } from "../_layout";
 import SkinPicker from "../../components/add-match/SkinPicker";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PURPLE = "#8b5cf6";
@@ -44,8 +46,22 @@ export default function AddMatchScreen() {
   const [mentalState, setMentalState] = useState(5);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const killsRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e: KeyboardEvent) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   if (!user)
     return (
@@ -141,12 +157,13 @@ export default function AddMatchScreen() {
   const isValid = placement !== null && kills !== null;
 
   return (
-    <KeyboardAwareScrollView
+    <ScrollView
       style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: keyboardHeight + 40 },
+      ]}
       keyboardShouldPersistTaps="handled"
-      enableOnAndroid={true}
-      extraScrollHeight={20}
       showsVerticalScrollIndicator={false}
     >
       {/* ── In-screen header ── */}
@@ -173,9 +190,7 @@ export default function AddMatchScreen() {
               onPress={() => setMode(m)}
               style={[
                 styles.segmentBtn,
-                mode === m
-                  ? styles.segmentBtnActive
-                  : styles.segmentBtnInactive,
+                mode === m ? styles.segmentBtnActive : styles.segmentBtnInactive,
               ]}
             >
               <Text
@@ -227,6 +242,8 @@ export default function AddMatchScreen() {
               onChangeText={handleKillsChange}
               placeholder="0"
               placeholderTextColor="#444"
+              returnKeyType="done"
+              blurOnSubmit={true}
             />
           </View>
         </View>
@@ -270,6 +287,8 @@ export default function AddMatchScreen() {
           placeholderTextColor="#444"
           multiline
           numberOfLines={3}
+          returnKeyType="done"
+          blurOnSubmit={true}
         />
       </View>
 
@@ -285,7 +304,7 @@ export default function AddMatchScreen() {
           <Text style={styles.submitText}>LOG MATCH</Text>
         )}
       </Pressable>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 }
 

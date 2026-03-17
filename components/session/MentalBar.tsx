@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { View, Text, StyleSheet } from "react-native";
+import { stateLabel } from "@/constants/analytics";
 
 const PURPLE = "#8b5cf6";
 
@@ -10,7 +11,11 @@ export default function MentalBar({ value }: { value: number }) {
     <View style={styles.mentalWrap}>
       <View style={styles.mentalLabelRow}>
         <Text style={styles.mentalLabel}>MENTAL STATE</Text>
-        <Text style={styles.mentalVal}>{value.toFixed(1)} / 10</Text>
+        <View style={styles.mentalLabelRow}>
+          <Text style={styles.mentalVal}>{value.toFixed(1)} </Text>
+        <Text style={styles.mentalVal}>{stateLabel(Math.round(value))}</Text>
+        </View>
+        
       </View>
       <View style={styles.mentalTrack}>
         <LinearGradient

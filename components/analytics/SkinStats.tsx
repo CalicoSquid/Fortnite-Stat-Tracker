@@ -93,21 +93,21 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
       color: AMBER,
       data: byWins,
       stat: `${byWins.wins} wins`,
-      icon: "trophy",
+      icon: "trophy-outline",
     },
     {
       label: "MOST KILLS",
       color: RED,
       data: byKills,
       stat: `${byKills.totalKills} total kills`,
-      icon: "flash",
+      icon: "skull-outline",
     },
     {
       label: "MOST TOP 10s",
       color: BLUE,
       data: byTop10,
       stat: `${byTop10.top10} top 10s`,
-      icon: "medal",
+      icon: "medal-outline",
     },
     ...(byPlace
       ? [
@@ -116,7 +116,7 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
             color: GREEN,
             data: byPlace,
             stat: `#${byPlace.avgPlace.toFixed(1)} avg`,
-            icon: "ribbon" as keyof typeof Ionicons.glyphMap,
+            icon: "ribbon-outline" as keyof typeof Ionicons.glyphMap,
           },
         ]
       : []),
@@ -127,7 +127,7 @@ export default function SkinStats({ matches }: { matches: AnalyticsMatch[] }) {
             color: "#555",
             data: worst,
             stat: `#${worst.avgPlace.toFixed(1)} avg · ${worst.wins} wins`,
-            icon: "skull" as keyof typeof Ionicons.glyphMap,
+            icon: "trending-down-outline" as keyof typeof Ionicons.glyphMap,
           },
         ]
       : []),

@@ -37,7 +37,7 @@ const tiles: {
   },
   {
     title: "Trophy Cabinet",
-    route: "/graphs" as Href,
+    route: "/trophy-cabinet" as Href,
     icon: "trophy-outline",
     color: AMBER,
   },
@@ -71,7 +71,7 @@ export default function HomeScreen() {
     saveUsername,
     startEditing,
     cancelEditing,
-  } = useUsername();
+  } = useUsername(user?.uid);
 
   // ── Active session listener ──
   useEffect(() => {

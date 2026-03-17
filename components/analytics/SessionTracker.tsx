@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Pressable,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import gradientColors from "@/constants/gradient";
 import { avg, formatDate, AnalyticsSession } from "@/constants/analytics";
 
@@ -22,6 +30,8 @@ export default function SessionTracker({
   sessions: AnalyticsSession[];
 }) {
   const [page, setPage] = useState(0);
+  const router = useRouter();
+
   const ended = sessions.filter((s) => s.endedAt !== null);
   if (!ended.length) return <EmptyState message="No completed sessions yet." />;
 
@@ -67,7 +77,7 @@ export default function SessionTracker({
   ];
 
   return (
-    <View style={{ gap: 14 }}>
+    <View style={{ gap: 16 }}>
       {/* ── Overview strip ── */}
       <View style={s.overviewStrip}>
         {[
@@ -98,20 +108,30 @@ export default function SessionTracker({
       <Text style={s.sectionLabel}>SESSION HIGHLIGHTS</Text>
       <View style={{ gap: 8 }}>
         {highlights.map(({ label, color, sess, val }) => (
-          <View
+          <Pressable
             key={label}
-            style={[s.highlightRow, { borderColor: color + "33" }]}
+            onPress={() => router.push(`/session/${sess.id}`)}
+            style={({ pressed }) => [
+              s.highlightRow,
+              { borderColor: color + "33", opacity: pressed ? 0.7 : 1 },
+            ]}
           >
             <Text style={[s.highlightLabel, { color }]}>{label}</Text>
-            <View style={{ flex: 1, paddingHorizontal: 12 }}>
-              <Text style={s.highlightDate}>{formatDate(sess.createdAt)}</Text>
-              <Text style={s.highlightSub}>
-                {sess.totalMatches} matches · {sess.winPercentage.toFixed(0)}%
-                win rate
+            <View style={{ flex: 1, paddingHorizontal: 10 }}>
+              <Text style={s.highlightDate} numberOfLines={1}>
+                {formatDate(sess.createdAt)}
+              </Text>
+              <Text style={s.highlightSub} numberOfLines={1}>
+                {sess.totalMatches}m · {sess.winPercentage.toFixed(0)}% wr
               </Text>
             </View>
-            <Text style={[s.highlightVal, { color }]}>{val}</Text>
-          </View>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <Text style={[s.highlightVal, { color }]}>{val}</Text>
+              <Ionicons name="chevron-forward" size={12} color={color + "66"} />
+            </View>
+          </Pressable>
         ))}
       </View>
 
@@ -120,44 +140,68 @@ export default function SessionTracker({
       {/* ── All sessions ── */}
       <Text style={s.sectionLabel}>ALL SESSIONS</Text>
       <View style={{ gap: 8 }}>
-        {shown.map((sess) => (
-          <View key={sess.id} style={s.sessRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.sessDate}>{formatDate(sess.createdAt)}</Text>
-              <Text style={s.sessSub}>{sess.totalMatches} matches</Text>
-            </View>
-            <View style={{ alignItems: "flex-end", gap: 3 }}>
-              <Text style={s.sessStat}>
-                {(sess.totalKills / Math.max(1, sess.totalMatches)).toFixed(1)}{" "}
-                avg kills
-              </Text>
-              <Text
-                style={[
-                  s.sessStat,
-                  { color: gradientColors[Math.round(sess.averageMental) - 1] },
-                ]}
-              >
-                {sess.averageMental.toFixed(1)} mental
-              </Text>
-              {sess.wins > 0 && (
-                <Text style={[s.sessStat, { color: AMBER }]}>
-                  👑 {sess.wins} {sess.wins === 1 ? "win" : "wins"}
+        {shown.map((sess) => {
+          const mentalColor = gradientColors[
+            Math.round(sess.averageMental) - 1
+          ] as string;
+          return (
+            <Pressable
+              key={sess.id}
+              onPress={() => router.push(`/session/${sess.id}`)}
+              style={({ pressed }) => [
+                s.sessRow,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              {/* Left — date + match count */}
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={s.sessDate}>{formatDate(sess.createdAt)}</Text>
+                <Text style={s.sessSub}>
+                  {sess.totalMatches} match{sess.totalMatches !== 1 ? "es" : ""}
                 </Text>
-              )}
-            </View>
-          </View>
-        ))}
+              </View>
+
+              {/* Right — stats */}
+              <View style={{ alignItems: "flex-end", gap: 4 }}>
+                <Text style={s.sessStat}>
+                  {(sess.totalKills / Math.max(1, sess.totalMatches)).toFixed(
+                    1,
+                  )}{" "}
+                  avg kills
+                </Text>
+                <Text style={[s.sessStat, { color: mentalColor }]}>
+                  {sess.averageMental.toFixed(1)} mental
+                </Text>
+                {sess.wins > 0 && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name="trophy" size={10} color={AMBER} />
+                    <Text style={[s.sessStat, { color: AMBER }]}>
+                      {sess.wins} {sess.wins === 1 ? "win" : "wins"}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={14}
+                color="#2a2a3a"
+                style={{ marginLeft: 8 }}
+              />
+            </Pressable>
+          );
+        })}
       </View>
 
+      {/* ── Pagination ── */}
       {totalPages > 1 && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: 4,
-          }}
-        >
+        <View style={s.paginationRow}>
           <TouchableOpacity
             style={[s.pageBtn, page === 0 && { opacity: 0.3 }]}
             onPress={() => setPage((p) => p - 1)}
@@ -165,9 +209,16 @@ export default function SessionTracker({
           >
             <Text style={s.pageBtnText}>‹ PREV</Text>
           </TouchableOpacity>
-          <Text style={s.pageIndicator}>
-            {page + 1} / {totalPages}
-          </Text>
+
+          <View style={{ flexDirection: "row", gap: 5 }}>
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <View
+                key={i}
+                style={[s.pageDot, i === page && s.pageDotActive]}
+              />
+            ))}
+          </View>
+
           <TouchableOpacity
             style={[s.pageBtn, page === totalPages - 1 && { opacity: 0.3 }]}
             onPress={() => setPage((p) => p + 1)}
@@ -190,6 +241,7 @@ const s = StyleSheet.create({
     marginBottom: 2,
   },
   cardDivider: { height: 1, backgroundColor: BORDER, marginHorizontal: 16 },
+
   overviewStrip: {
     flexDirection: "row",
     backgroundColor: INNER_BG,
@@ -198,51 +250,63 @@ const s = StyleSheet.create({
     borderColor: BORDER,
     overflow: "hidden",
   },
-  overviewItem: { flex: 1, paddingVertical: 12, alignItems: "center" },
-  overviewVal: {
-    color: PURPLE,
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
+  overviewItem: { flex: 1, paddingVertical: 14, alignItems: "center", gap: 4 },
+  overviewVal: { color: PURPLE, fontSize: 22, fontWeight: "700" },
   overviewLbl: {
     color: "#444",
     fontSize: 8,
     letterSpacing: 1.5,
     fontWeight: "600",
   },
+
   highlightRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: INNER_BG,
     borderRadius: 10,
-    padding: 12,
+    paddingVertical: 17,
+    paddingHorizontal: 12,
     borderWidth: 1,
   },
   highlightLabel: {
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 1,
-    minWidth: 64,
+    minWidth: 70,
+    width: "40%",
   },
-  highlightDate: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  highlightSub: { color: "#444", fontSize: 10 },
+  highlightDate: {
+    color: "#ccc",
+    fontSize: 11,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  highlightSub: { color: "#444", fontSize: 9 },
   highlightVal: { fontSize: 13, fontWeight: "700" },
+
+  emptyState: { paddingVertical: 20, alignItems: "center" },
+  emptyStateText: { color: "#444", fontSize: 12, letterSpacing: 0.5 },
+
   sessRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: INNER_BG,
     borderRadius: 10,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: "#16162a",
-    gap: 8,
   },
-  sessDate: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  sessDate: { color: "#ccc", fontSize: 12, fontWeight: "600" },
   sessSub: { color: "#444", fontSize: 10 },
-  sessStat: { color: "#888", fontSize: 11, fontWeight: "600" },
-  emptyState: { paddingVertical: 20, alignItems: "center" },
-  emptyStateText: { color: "#444", fontSize: 12, letterSpacing: 0.5 },
+  sessStat: { color: "#666", fontSize: 11, fontWeight: "600" },
+
+  paginationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
   pageBtn: {
     borderWidth: 1,
     borderColor: BORDER,
@@ -256,10 +320,6 @@ const s = StyleSheet.create({
     letterSpacing: 1.5,
     fontWeight: "600",
   },
-  pageIndicator: {
-    color: "#444",
-    fontSize: 10,
-    letterSpacing: 1,
-    fontWeight: "600",
-  },
+  pageDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: BORDER },
+  pageDotActive: { backgroundColor: "#444", width: 14 },
 });
